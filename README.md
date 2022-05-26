@@ -5,7 +5,7 @@ My procedural terrain addon for Garrys Mod
 - Custom entity that acts as a displacement
 - Custom lightmap with generated shading
 - Customizable blendmap between 2 textures
-- No texture streaching
+- No uv/texture stretching
 - Trees & grass foliage
 - Menu with customizable settings & optional user-created LUA heightmap function
 - All chunk, blending, foliage, and tree shading complete in under 10 seconds (with my specs)
