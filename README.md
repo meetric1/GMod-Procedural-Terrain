@@ -1,7 +1,7 @@
 # GMod Procedural Terrain
 My procedural terrain addon for Garrys Mod
 
-###Current Features: 
+### Current Features: 
 - Custom entity that acts as a displacement
 - Custom lightmap with generated shading
 - Customizable blendmap between 2 textures
@@ -12,7 +12,7 @@ My procedural terrain addon for Garrys Mod
 - Lightmap calculations complete in under a minute (with my specs)
 - Better performance than other displacement forest maps such as gm_fork and gm_boreas
 
-###Planned Features & Bugfixes:
+### Planned Features & Bugfixes:
 - Lakes using some kind of water system
 - Seasons/Biomes
 - Tree & Rock collision
