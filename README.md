@@ -1,7 +1,7 @@
 # GMod Procedural Terrain
 My procedural terrain addon for Garrys Mod
 
-[![]()](https://cdn.discordapp.com/attachments/967101302452654150/979190030260133928/unknown.png)
+[![](Grass & Trees)](https://cdn.discordapp.com/attachments/967101302452654150/979190030260133928/unknown.png)
 
 ### Current Features: 
 - Custom entity that acts as a displacement
