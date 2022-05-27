@@ -1,7 +1,7 @@
 # GMod Procedural Terrain
 My procedural terrain addon for Garrys Mod
 
-If you want to try this for yourself, download and extract the code to GarysMod/garrysmod/addons
+If you want to try this for yourself, download and extract the code to GarrysMod/garrysmod/addons
 ##### AS OF NOW IT REQUIRES EP2 TO BE MOUNTED!
 
 ### Current Features: 
