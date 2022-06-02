@@ -1,9 +1,10 @@
 AddCSLuaFile()
 if SERVER then return end
 
+local options
 concommand.Add("terrain_menu", function()
+    options = options or table.Copy(Terrain.MathFuncVariables)
     local changedTerrain = false
-    local editedValues = Terrain.MathFuncVariables
 
     -- start creating visual design
     local mainFrame = vgui.Create("DFrame")
@@ -17,9 +18,9 @@ concommand.Add("terrain_menu", function()
                 --v:BuildCollision()
                 v:GenerateMesh()
                 v:GenerateTrees()
+                v:SetRenderBounds(v:OBBMins(), v:OBBMaxs() + Vector(0, 0, 1000))
             end
         end
-        Terrain.MathFuncVariables = editedValues
     end
 
     -- the tabs
@@ -39,11 +40,11 @@ concommand.Add("terrain_menu", function()
         heightSlider:SetSize(410, 15)
         heightSlider:SetText("Mountain Height")
         heightSlider:SetMinMax(0, 200)
-        heightSlider:SetValue(editedValues.height)
+        heightSlider:SetValue(options.height)
         heightSlider:SetDecimals(1)
         heightSlider:SetDark(true)
         function heightSlider:OnValueChanged(val)
-            editedValues.height = val
+            options.height = val
         end
 
         local noiseScaleSlider = vgui.Create("DNumSlider", scrollPanel)
@@ -51,11 +52,11 @@ concommand.Add("terrain_menu", function()
         noiseScaleSlider:SetSize(410, 15)
         noiseScaleSlider:SetText("Mountain Size")
         noiseScaleSlider:SetMinMax(1, 25)
-        noiseScaleSlider:SetValue(editedValues.noiseScale)
+        noiseScaleSlider:SetValue(options.noiseScale)
         noiseScaleSlider:SetDecimals(1)
         noiseScaleSlider:SetDark(true)
         function noiseScaleSlider:OnValueChanged(val)
-            editedValues.noiseScale = val
+            options.noiseScale = val
         end
 
         local offsetSlider = vgui.Create("DNumSlider", scrollPanel)
@@ -63,11 +64,11 @@ concommand.Add("terrain_menu", function()
         offsetSlider:SetSize(410, 15)
         offsetSlider:SetText("Terrain Z Offset")
         offsetSlider:SetMinMax(0, 100)
-        offsetSlider:SetValue(editedValues.offset)
+        offsetSlider:SetValue(options.offset)
         offsetSlider:SetDecimals(1)
         offsetSlider:SetDark(true)
         function offsetSlider:OnValueChanged(val)
-            editedValues.offset = val
+            options.offset = val
         end
 
         local seedSlider = vgui.Create("DNumSlider", scrollPanel)
@@ -75,31 +76,31 @@ concommand.Add("terrain_menu", function()
         seedSlider:SetSize(410, 15)
         seedSlider:SetText("Terrain Seed")
         seedSlider:SetMinMax(0, 2^32)
-        seedSlider:SetValue(editedValues.seed)
+        seedSlider:SetValue(options.seed)
         seedSlider:SetDecimals(0)
         seedSlider:SetDark(true)
         function seedSlider:OnValueChanged(val)
-            editedValues.seed = val
+            options.seed = val
         end
 
         local clampBox = vgui.Create("DCheckBoxLabel", scrollPanel)
         clampBox:SetPos(0, 100)
         clampBox:SetSize(16, 16)
         clampBox:SetText("Clamp Noise? (0 to 1 instead of -1 to 1)")
-        clampBox:SetValue(editedValues.clampNoise)
+        clampBox:SetValue(options.clampNoise)
         clampBox:SetTextColor(Color(0, 0, 0))
         function clampBox:OnChange(val)
-            editedValues.clampNoise = val
+            options.clampNoise = val
         end
 
         local spawnBox = vgui.Create("DCheckBoxLabel", scrollPanel)
         spawnBox:SetPos(0, 125)
         spawnBox:SetSize(16, 16)
         spawnBox:SetText("Leave Space for Flatgrass Building?")
-        spawnBox:SetValue(editedValues.spawnArea)
+        spawnBox:SetValue(options.spawnArea)
         spawnBox:SetTextColor(Color(0, 0, 0))
         function spawnBox:OnChange(val)
-            editedValues.spawnArea = val
+            options.spawnArea = val
         end
     end
 
@@ -114,11 +115,11 @@ concommand.Add("terrain_menu", function()
         treeHeight:SetSize(410, 15)
         treeHeight:SetText("Tree Size")
         treeHeight:SetMinMax(1, 10)
-        treeHeight:SetValue(editedValues.treeHeight)
+        treeHeight:SetValue(options.treeHeight)
         treeHeight:SetDecimals(1)
         treeHeight:SetDark(true)
         function treeHeight:OnValueChanged(val)
-            editedValues.treeHeight = val
+            options.treeHeight = val
         end
 
         local treeResolution = vgui.Create("DNumSlider", scrollPanel)
@@ -126,11 +127,11 @@ concommand.Add("terrain_menu", function()
         treeResolution:SetSize(410, 15)
         treeResolution:SetText("Tree Amount (x*x res per chunk)")
         treeResolution:SetMinMax(0, 20)
-        treeResolution:SetValue(editedValues.treeResolution)
+        treeResolution:SetValue(options.treeResolution)
         treeResolution:SetDecimals(0)
         treeResolution:SetDark(true)
         function treeResolution:OnValueChanged(val)
-            editedValues.treeResolution = math.Round(val)
+            options.treeResolution = math.Round(val)
         end
 
         local treeThreshold = vgui.Create("DNumSlider", scrollPanel)
@@ -138,11 +139,11 @@ concommand.Add("terrain_menu", function()
         treeThreshold:SetSize(410, 15)
         treeThreshold:SetText("Tree Slope Threshold")
         treeThreshold:SetMinMax(0, 1)
-        treeThreshold:SetValue(editedValues.treeThreshold)
+        treeThreshold:SetValue(options.treeThreshold)
         treeThreshold:SetDecimals(3)
         treeThreshold:SetDark(true)
         function treeThreshold:OnValueChanged(val)
-            editedValues.treeThreshold = val
+            options.treeThreshold = val
         end
 
         local grassSize = vgui.Create("DNumSlider", scrollPanel)
@@ -150,21 +151,21 @@ concommand.Add("terrain_menu", function()
         grassSize:SetSize(410, 15)
         grassSize:SetText("Grass Size")
         grassSize:SetMinMax(5, 100)
-        grassSize:SetValue(editedValues.grassSize)
+        grassSize:SetValue(options.grassSize)
         grassSize:SetDecimals(0)
         grassSize:SetDark(true)
         function grassSize:OnValueChanged(val)
-            editedValues.grassSize = val
+            options.grassSize = val
         end
 
         local grassCheckbox = vgui.Create("DCheckBoxLabel", scrollPanel)
         grassCheckbox:SetPos(0, 125)
         grassCheckbox:SetSize(16, 16)
         grassCheckbox:SetText("Generate Grass?")
-        grassCheckbox:SetValue(editedValues.generateGrass)
+        grassCheckbox:SetValue(options.generateGrass)
         grassCheckbox:SetTextColor(Color(0, 0, 0))
         function grassCheckbox:OnChange(val)
-            editedValues.generateGrass = val and true
+            options.generateGrass = val and true
         end
     end
 
@@ -190,9 +191,9 @@ concommand.Add("terrain_menu", function()
         func:SetPos(0, 50)
         func:SetSize(400, 200)
         func:SetMultiline(true)
-        func:SetText(editedValues.customFunction or "")
+        func:SetText(options.customFunction or "")
         function func:OnChange()
-            editedValues.customFunction = nil
+            options.customFunction = nil
             if !LocalPlayer():IsSuperAdmin() then
                 funcText:SetText(" You must be Superadmin to use this!")
                 funcText:SetColor(Color(255, 0, 0))
@@ -214,7 +215,7 @@ concommand.Add("terrain_menu", function()
                         end
                         funcText:SetText(" Success")
                         funcText:SetColor(Color(100, 255, 100))
-                        editedValues.customFunction = func:GetValue()
+                        options.customFunction = func:GetValue()
                     end)
                     if !suc then
                         funcText:SetText(" Error: " .. msg)
@@ -252,10 +253,10 @@ concommand.Add("terrain_menu", function()
         spawnBox:SetPos(207, 3)
         spawnBox:SetSize(16, 16)
         spawnBox:SetText("Leave Space for Flatgrass Building?")
-        spawnBox:SetValue(editedValues.spawnArea)
+        spawnBox:SetValue(options.spawnArea)
         spawnBox:SetTextColor(Color(0, 0, 0))
         function spawnBox:OnChange(val)
-            editedValues.spawnArea = val
+            options.spawnArea = val
         end
     end
 
@@ -330,17 +331,18 @@ concommand.Add("terrain_menu", function()
     
 
     -- test & submit changes button
-    local submitButton = vgui.Create("DButton", tabsFrame)
-    submitButton:SetPos(250, 305)
-    submitButton:SetSize(150, 50)
-    submitButton:SetIcon("models/weapons/v_slam/new light1")
-    submitButton:SetText("     Submit Changes")
-    function submitButton:DoClick()
-        if !LocalPlayer():IsSuperAdmin() then return end
-        net.Start("TERRAIN_SEND_DATA")
-        net.WriteTable(editedValues)    -- writetable since value types may change during development
-        net.SendToServer()
-        changedTerrain = false
+    if LocalPlayer():IsSuperAdmin() then 
+        local submitButton = vgui.Create("DButton", tabsFrame)
+        submitButton:SetPos(250, 305)
+        submitButton:SetSize(150, 50)
+        submitButton:SetIcon("models/weapons/v_slam/new light1")
+        submitButton:SetText("     Submit Changes")
+        function submitButton:DoClick()
+            net.Start("TERRAIN_SEND_DATA")
+            net.WriteTable(options)    -- writetable since value types may change during development
+            net.SendToServer()
+            changedTerrain = false
+        end
     end
 
     local testButton = vgui.Create("DButton", tabsFrame)
@@ -349,13 +351,13 @@ concommand.Add("terrain_menu", function()
     testButton:SetIcon("models/weapons/v_slam/new light2")
     testButton:SetText("Test Changes")
     function testButton:DoClick() 
-        local newFunction = Terrain.BuildMathFunc(editedValues)
+        local newFunction = Terrain.BuildMathFunc(options)
 
         -- reload all chunks with the new function
         for k, v in ipairs(ents.FindByClass("terrain_chunk")) do
             --v:BuildCollision(newFunction) -- this shit crashes u
             v:GenerateMesh(newFunction)
-            v:GenerateTrees(newFunction, editedValues)
+            v:GenerateTrees(newFunction, options)
             v:SetRenderBounds(v:OBBMins() * Vector(1, 1, -1), v:OBBMaxs() + Vector(0, 0, 1000))
         end
 

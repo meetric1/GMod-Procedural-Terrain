@@ -260,8 +260,8 @@ function ENT:GenerateGrass()
     local err, msg
     mesh.Begin(self.GrassMesh, MATERIAL_TRIANGLES, grassAmount^2)
     err, msg = pcall(function()
-        for y = 0, grassAmount - 5 do
-            for x = 0, grassAmount - 5 do
+        for y = 0, grassAmount - 1 do
+            for x = 0, grassAmount - 1 do
                 local x = x * Terrain.ChunkResolution / grassAmount
                 local y = y * Terrain.ChunkResolution / grassAmount
                 local randoffsetx = util.SharedRandom("TerrainGrassX", 0, 1, (y * Terrain.ChunkResolution + x) + self:GetChunkX() * Terrain.ChunkResolution^2)
