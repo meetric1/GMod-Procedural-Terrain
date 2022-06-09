@@ -52,11 +52,16 @@ function ENT:GenerateTrees(heightFunction, values)
 
     if self:GetOverhang() then return end
     local treeMultiplier = Terrain.ChunkResolution / treeResolution * Terrain.ChunkSize
+    local randomIndex = 0
+    local chunkIndex = tostring(self:GetChunkX()) .. tostring(self:GetChunkY())
     for y = 0, treeResolution - 1 do
         for x = 0, treeResolution - 1 do
+            randomIndex = randomIndex + 1
             local m = Matrix()
-            local randseedx = util.SharedRandom("TerrainSeedX", 0, 1, (y * treeResolution + x) + self:GetChunkX() * treeResolution^2)
-            local randseedy = util.SharedRandom("TerrainSeedY", 0, 1, (x * treeResolution + y) + self:GetChunkY() * treeResolution^2)
+
+            // generate seeded random position for tree
+            local randseedx = util.SharedRandom("TerrainSeedX" .. chunkIndex, 0, 1, randomIndex)
+            local randseedy = util.SharedRandom("TerrainSeedY" .. chunkIndex, 0, 1, randomIndex)
             local randPos = Vector(randseedx, randseedy) * treeMultiplier
 
             -- chunk offset in world space
@@ -111,7 +116,7 @@ function ENT:GenerateTrees(heightFunction, values)
             m:SetScale(Vector(1, 1, 1) * treeHeight)
             finalPos[3] = finalPos[3] + 256 * treeHeight  -- add tree height
             table.insert(self.TreeMatrices, m)
-            table.insert(self.TreeModels, math.floor(randseedy * 99999 % 4.1) + 1)  -- 4.1 means 1/50 chance for a rock to generate instead of a tree
+            table.insert(self.TreeModels, math.floor(util.SharedRandom("TerrainModel" .. chunkIndex, 0, 4.1, randomIndex)) + 1)  -- 4.1 means 1/50 chance for a rock to generate instead of a tree
             table.insert(self.TreeShading, util.TraceLine({start = finalPos, endpos = finalPos + Terrain.SunDir * 99999}).HitSky and 1.5 or 0.5)
         end
     end
@@ -258,14 +263,18 @@ function ENT:GenerateGrass()
 
     local mesh = mesh
     local err, msg
+    local chunkIndex = tostring(self:GetChunkX()) .. tostring(self:GetChunkY())
+    local randomIndex = 0
     mesh.Begin(self.GrassMesh, MATERIAL_TRIANGLES, grassAmount^2)
     err, msg = pcall(function()
         for y = 0, grassAmount - 1 do
             for x = 0, grassAmount - 1 do
-                local x = x * Terrain.ChunkResolution / grassAmount
-                local y = y * Terrain.ChunkResolution / grassAmount
-                local randoffsetx = util.SharedRandom("TerrainGrassX", 0, 1, (y * Terrain.ChunkResolution + x) + self:GetChunkX() * Terrain.ChunkResolution^2)
-                local randoffsety = util.SharedRandom("TerrainGrassY", 0, 1, (x * Terrain.ChunkResolution + y) + self:GetChunkY() * Terrain.ChunkResolution^2)
+                randomIndex = randomIndex + 1
+                local mult = Terrain.ChunkResolution / grassAmount
+                local x = x * mult
+                local y = y * mult
+                local randoffsetx = util.SharedRandom("TerrainGrassX" .. chunkIndex, 0, 1, randomIndex) * mult
+                local randoffsety = util.SharedRandom("TerrainGrassY" .. chunkIndex, 0, 1, randomIndex) * mult
                 
                 -- chunk offset in world space
                 local chunkoffsetx = self:GetChunkX() * Terrain.ChunkResScale   -- Terrain.ChunkSize * Terrain.ChunkResolution
@@ -284,6 +293,7 @@ function ENT:GenerateGrass()
                 local offsetx = randbrushx - 0.1
                 local offsety = 0.5 - randbrushy
                 local randdir = Angle(0, randoffsetx * 9999, 0)
+
                 mesh.TexCoord(0, offsetx, 0.3 + offsety)
                 mesh.Position(mainPos - randdir:Right() * grassSize)
                 mesh.Color(200, 255, 200, 200)
@@ -414,6 +424,9 @@ local lm = Terrain.Lightmap
 local treeMaterial = Material("models/props_foliage/arbre01")   --models/props_foliage/arbre01
 local rockMaterial = Material("models/props_foliage/coastrock02")
 local detailMaterial = Material("detail/detailsprites")  -- detail/detailsprites models/props_combine/combine_interface_disp
+waterMaterial = Material("models/shadertest/shader3")
+//waterMaterial:SetString("$reflecttexture", "_rt_waterreflection")
+//waterMaterial:SetString("$refracttexture", "_rt_waterrefraction")
 
 -- cache ALL of these for faster lookup
 local renderTable = {Material = Terrain.Material}
@@ -476,11 +489,11 @@ function ENT:GetRenderMesh()
 
             -- give the tree its shading
             local light = lighting[k]
-            if light != lastLight then
+            if light != lastlight then
                 render_SetModelLighting(0, light, light, light)
                 render_SetModelLighting(2, light, light, light)
                 render_SetModelLighting(4, light, light, light)
-                lastLight = light
+                lastlight = light
             end
 
             -- push custom matrix generated earlier and render the tree
@@ -518,6 +531,11 @@ function ENT:GetRenderMesh()
             cam_PopModelMatrix()
         end
     end
+
+    render_SetMaterial(waterMaterial)
+    local sc = Terrain.ChunkResScale * 0.5
+    render.DrawQuadEasy(Vector(self:GetPos()[1] + sc, self:GetPos()[2] + sc, -12000), Vector(0, 0, 1), sc * 2, sc * 2)
+    render.DrawQuadEasy(Vector(self:GetPos()[1] + sc, self:GetPos()[2] + sc, -12000), Vector(0, 0, -1), sc * 2, sc * 2)
 
     -- render the chunk mesh itself
     renderTable.Mesh = self.RenderMesh

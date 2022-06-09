@@ -145,7 +145,8 @@ local function generateLightmap(res, heightFunction)
 					local worldy2 = (y / (res + 1)) * globalTerrainScale
 					worldx2 = worldx2 * 2 - globalTerrainScale
 					worldy2 = worldy2 * 2 - globalTerrainScale
-					local dotShading = (getHeight(worldx, worldy) - getHeight(worldx2, worldy)):Cross(getHeight(worldx, worldy) - getHeight(worldx2, worldy2)):GetNormalized():Dot(Terrain.SunDir)	-- smooth shading
+					local triNorm = (getHeight(worldx, worldy) - getHeight(worldx2, worldy)):Cross(getHeight(worldx, worldy) - getHeight(worldx2, worldy2)):GetNormalized()
+					local dotShading = triNorm:Dot(Terrain.SunDir)	-- smooth shading
 					--local dotShading = (tri1[2] - tri1[1]):Cross(tri1[2] - tri1[3]):GetNormalized():Dot(sunDir)	-- flat shading (disabled)
 
 					local shadowAmount = (dotShading + 1.5) * 64
@@ -167,7 +168,7 @@ local function generateLightmap(res, heightFunction)
 						local v = Vector(worldx, worldy, 25601)
 						local shadowPos = intersectRayWithTriangle(v, Vector(0, 0, -1), getHeight(lerpXTop, lerpYBottom), getHeight(lerpXBottom, lerpYBottom), getHeight(lerpXBottom, lerpYTop))	-- 25601 = max height
 						shadowPos = shadowPos or intersectRayWithTriangle(v, Vector(0, 0, -1), getHeight(lerpXTop, lerpYTop), getHeight(lerpXTop, lerpYBottom), getHeight(lerpXBottom, lerpYTop))
-						shadowPos = (shadowPos or Vector(0, 0, 0)) + Vector(0, 0, 1)
+						shadowPos = (shadowPos or Vector(0, 0, 0)) + Vector(0, 0, 1)// + triNorm * 10
 						if !util_TraceLine({start = shadowPos, endpos = shadowPos + Terrain.SunDir * 99999, filter = traceFunc}).HitSky then	-- if it hits rock
 							shadowAmount = 50
 						end

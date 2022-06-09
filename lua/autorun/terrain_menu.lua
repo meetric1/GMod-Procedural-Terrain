@@ -260,6 +260,23 @@ concommand.Add("terrain_menu", function()
         end
     end
 
+    local function waterTab(tabs)
+        local scrollPanel = vgui.Create("DScrollPanel", tabs)
+        local scrollEditTab = tabs:AddSheet("Water", scrollPanel, "icon16/water.png").Tab
+
+        local waterHeight = vgui.Create("DNumSlider", scrollPanel)
+        waterHeight:SetPos(0, 0)
+        waterHeight:SetSize(410, 15)
+        waterHeight:SetText("Water Level")
+        waterHeight:SetMinMax(-12000, 0)
+        waterHeight:SetValue(-12000)
+        waterHeight:SetDecimals(0)
+        waterHeight:SetDark(true)
+        function waterHeight:OnValueChanged(val)
+            
+        end
+    end
+
     local function settingsTab(tabs)
         local scrollPanel = vgui.Create("DScrollPanel", tabs)
         local scrollEditTab = tabs:AddSheet("Client Settings", scrollPanel, "icon16/page_white_gear.png").Tab
@@ -327,8 +344,8 @@ concommand.Add("terrain_menu", function()
     mountainTab(tabs)
     functionTab(tabs)
     treeTab(tabs)
+    waterTab(tabs)
     settingsTab(tabs)
-    
 
     -- test & submit changes button
     if LocalPlayer():IsSuperAdmin() then 
