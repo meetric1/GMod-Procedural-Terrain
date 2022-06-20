@@ -14,13 +14,12 @@ If you want to try this for yourself, download and extract the code to GarrysMod
 - All chunk, blending, foliage, and tree shading complete in under 10 seconds (with my specs)
 - Lightmap calculations complete in under a minute (with my specs)
 - Better performance than other displacement forest maps such as gm_fork and gm_boreas
+- Tree & Rock collision
+- Lakes / water system
 
 ### Planned Features & Bugfixes:
-- Lakes using some kind of water system
 - Seasons/Biomes
-- Tree & Rock collision
 - Import actual models instead of using them from EP2
 - Fix a crash related to the 32Bit branch of gmod
 - More customizable features in the menu
-- (Maybe) Pathways/Hiking Trails
 
