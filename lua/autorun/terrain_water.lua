@@ -1,9 +1,12 @@
-// swim code yoinked from gwater
-local gravity_convar = GetConVar("sv_gravity")
+if game.GetMap() != "gm_flatgrass" then return end
 
+local gravity_convar = GetConVar("sv_gravity")
 local function inWater(ply)
-    if isentity(ply) then return ply:GetPos()[3] < -12000 end
-    return ply[3] < -12000
+    local waterHeight = Terrain.Variables.waterHeight
+    if !waterHeight then return false end
+
+    if isentity(ply) then return ply:GetPos()[3] < waterHeight end
+    return ply[3] < waterHeight
 end
 
 // water screenspace overlay
@@ -11,6 +14,7 @@ local changedWater = false
 hook.Add("RenderScreenspaceEffects", "Terrain_PP", function()
 	if inWater(EyePos()) then
         DrawMaterialOverlay("effects/water_warp01", 0.1)
+        DrawMaterialOverlay("effects/water_warp", 0.05)
         if !changedWater then
             changedWater = true
             LocalPlayer():EmitSound("Physics.WaterSplash")
@@ -23,6 +27,7 @@ hook.Add("RenderScreenspaceEffects", "Terrain_PP", function()
     end
 end)
 
+// swim code yoinked from gwater, thanks again kodya
 // player animations
 hook.Add("CalcMainActivity", "Terrain_Swimming", function(ply)
 	if !inWater(ply) or ply:IsOnGround() then return end
@@ -32,6 +37,8 @@ end)
 // main movement
 hook.Add("Move", "Terrain_Swimming", function(ply, move)
     if !inWater(ply) or CLIENT then return end
+    if Terrain.Variables.waterKill then ply:Kill() return end
+
 	local vel = move:GetVelocity()
 	local ang = move:GetMoveAngles()
 
@@ -67,4 +74,27 @@ hook.Add("FinishMove", "Terrain_Swimming", function(ply, move)
 
 	vel.z = vel.z + FrameTime() * gravity
 	move:SetVelocity(vel)
+end)
+
+// serverside stuff now
+if CLIENT then return end
+
+hook.Add("PlayerFootstep", "Terrain_Water", function(ply, pos, foot, sound, volume, rf)
+    if inWater(ply) then 
+        ply:EmitSound(foot == 0 and "Water.StepLeft" or "Water.StepRight", nil, nil, volume, CHAN_BODY)     // volume doesnt work for some reason.. oh well
+        return true
+    end
+end )
+
+// no fall damage in fake water
+hook.Add("GetFallDamage", "Terrain_Water", function(ply, speed)
+    // for some reason player position isnt fully accurate when this is called
+    local tr = util.TraceHull({
+        start = ply:GetPos(),
+        endpos = ply:GetPos() + ply:GetVelocity(),
+        maxs = ply:OBBMaxs(),
+        mins = ply:OBBMins(),
+        filter = ply
+    })
+    if tr.Hit and inWater(tr.HitPos) then return 0 end
 end)

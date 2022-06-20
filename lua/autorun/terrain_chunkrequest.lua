@@ -3,20 +3,20 @@ AddCSLuaFile()
 if game.GetMap() != "gm_flatgrass" then return end
 
 if SERVER then 
-    util.AddNetworkString("TERRAIN_SEND_DATA")  -- superadmin only!
+    util.AddNetworkString("TERRAIN_SEND_DATA")  // superadmin only!
     Terrain = Terrain or {}
     
     local function genChunks()
         for y = Terrain.Resolution - 1, -Terrain.Resolution, -1 do
             for x = Terrain.Resolution - 1, -Terrain.Resolution, -1 do
-                -- caves test
-                --local chunk = ents.Create("terrain_chunk")
-                --chunk:SetPos(Vector(x * Terrain.ChunkResScale, y * Terrain.ChunkResScale, Terrain.ZOffset))
-                --chunk:SetChunkX(x)
-                --chunk:SetChunkY(y)
-                --chunk:SetOverhang(true)
-                --chunk:Spawn()
-                --table.insert(Terrain.Chunks, chunk)
+                // caves test
+                //local chunk = ents.Create("terrain_chunk")
+                //chunk:SetPos(Vector(x * Terrain.ChunkResScale, y * Terrain.ChunkResScale, Terrain.ZOffset))
+                //chunk:SetChunkX(x)
+                //chunk:SetChunkY(y)
+                //chunk:SetOverhang(true)
+                //chunk:Spawn()
+                //table.insert(Terrain.Chunks, chunk)
     
                 local chunk = ents.Create("terrain_chunk")
                 chunk:SetPos(Vector(x * Terrain.ChunkResScale, y * Terrain.ChunkResScale, Terrain.ZOffset))
@@ -45,10 +45,10 @@ if SERVER then
         end)
     end
     
-    timer.Simple(1, Terrain.GenerateAll)    --generate all chunks
+    timer.Simple(1, Terrain.GenerateAll)    //generate all chunks
 
     net.Receive("TERRAIN_SEND_DATA", function(len, ply)
-        if !ply or !ply:IsValid() or !ply:IsSuperAdmin() then return end    -- only superadmins can edit terrain
+        if !ply or !ply:IsValid() or !ply:IsSuperAdmin() then return end    // only superadmins can edit terrain
 
         local t = net.ReadTable()
         Terrain.MathFunc = Terrain.BuildMathFunc(t)
@@ -56,14 +56,11 @@ if SERVER then
         net.WriteTable(t)
         net.Broadcast()
 
-        Terrain.MathFuncVariables = t
-        Terrain.TreeResolution = t.treeResolution
-        Terrain.TreeHeight = t.treeHeight
-        Terrain.TreeThreshold = t.treeThreshold
-        timer.Simple(1, Terrain.GenerateAll)    -- give clients a second to receive the data
+        Terrain.Variables = t
+        timer.Simple(1, Terrain.GenerateAll)    // give clients a second to receive the data
     end)
 else
-    -- clients can randomly forget chunk data during a lagspike, we rebuild it if that happens
+    // clients can randomly forget chunk data during a lagspike, we rebuild it if that happens
     local co = coroutine.create(function()
         while true do 
             for k, v in ipairs(ents.FindByClass("terrain_chunk")) do
@@ -78,17 +75,14 @@ else
         end
     end)
 
-    -- request server to reload chunks
+    // request server to reload chunks
     hook.Add("Tick", "terrain_init", function()
         coroutine.resume(co)
     end)
 
     net.Receive("TERRAIN_SEND_DATA", function(len)
         local t = net.ReadTable()
-        Terrain.MathFuncVariables = t
+        Terrain.Variables = t
         Terrain.MathFunc = Terrain.BuildMathFunc()
-        Terrain.TreeResolution = t.treeResolution
-        Terrain.TreeHeight = t.treeHeight
-        Terrain.TreeThreshold = t.treeThreshold
     end)
 end

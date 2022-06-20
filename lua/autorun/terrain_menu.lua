@@ -1,12 +1,16 @@
 AddCSLuaFile()
 if SERVER then return end
 
+
+CreateClientConVar("terrain_loddistance", "5000", true, false, "Distance to chunk that defines wheather to render high or low definition", 0)
+cvars.AddChangeCallback("terrain_loddistance", function(_, _, val) Terrain.LODDistance = val^2 end)
+
 local options
 concommand.Add("terrain_menu", function()
-    options = options or table.Copy(Terrain.MathFuncVariables)
+    options = options or table.Copy(Terrain.Variables)
     local changedTerrain = false
 
-    -- start creating visual design
+    // start creating visual design
     local mainFrame = vgui.Create("DFrame")
     mainFrame:SetSize(800, 400)
     mainFrame:SetTitle("Terrain Menu")
@@ -15,26 +19,27 @@ concommand.Add("terrain_menu", function()
     function mainFrame:OnClose()
         if changedTerrain then
             for k, v in ipairs(ents.FindByClass("terrain_chunk")) do
-                --v:BuildCollision()
+                //v:BuildCollision()
                 v:GenerateMesh()
                 v:GenerateTrees()
                 v:SetRenderBounds(v:OBBMins(), v:OBBMaxs() + Vector(0, 0, 1000))
             end
         end
+        Terrain.Variables.temp_waterHeight = nil
     end
 
-    -- the tabs
+    // the tabs
     local tabsFrame = vgui.Create("DPanel", mainFrame)
     tabsFrame:SetSize(425, 365)
     tabsFrame:SetPos(370, 30)
     tabsFrame.Paint = nil
 
-    -- the mountain tab, contains the submit & test buttons & height modifiers
+    // the mountain tab, contains the submit & test buttons & height modifiers
     local function mountainTab(tabs)
         local scrollPanel = vgui.Create("DScrollPanel", tabs)
         local scrollEditTab = tabs:AddSheet("Mountains", scrollPanel, "icon16/world_edit.png").Tab
 
-        -- editable sliders
+        // editable sliders
         local heightSlider = vgui.Create("DNumSlider", scrollPanel)
         heightSlider:SetPos(0, 0)
         heightSlider:SetSize(410, 15)
@@ -51,7 +56,7 @@ concommand.Add("terrain_menu", function()
         noiseScaleSlider:SetPos(0, 25)
         noiseScaleSlider:SetSize(410, 15)
         noiseScaleSlider:SetText("Mountain Size")
-        noiseScaleSlider:SetMinMax(1, 25)
+        noiseScaleSlider:SetMinMax(1, 50)
         noiseScaleSlider:SetValue(options.noiseScale)
         noiseScaleSlider:SetDecimals(1)
         noiseScaleSlider:SetDark(true)
@@ -104,12 +109,12 @@ concommand.Add("terrain_menu", function()
         end
     end
 
-    -- the mountain tab, contains the submit & test buttons & height modifiers
+    // the mountain tab, contains the submit & test buttons & height modifiers
     local function treeTab(tabs)
         local scrollPanel = vgui.Create("DScrollPanel", tabs)
         local scrollEditTab = tabs:AddSheet("Foliage", scrollPanel, "icon16/arrow_up.png").Tab
 
-        -- editable sliders
+        // editable sliders
         local treeHeight = vgui.Create("DNumSlider", scrollPanel)
         treeHeight:SetPos(0, 0)
         treeHeight:SetSize(410, 15)
@@ -177,7 +182,7 @@ concommand.Add("terrain_menu", function()
         funcText:SetPos(0, 30)
         funcText:SetSize(410, 16)
         funcText:SetColor(Color(0, 0, 0))
-        funcText:SetText("Optional Custom GLua Height Function (Must return a number!)")
+        funcText:SetText("Optional Custom GLua Height Function (Must return a number in 0-100 Range!)")
 
         local funcText = vgui.Create("DLabel", scrollPanel)
         funcText:SetPos(0, 255)
@@ -243,6 +248,9 @@ concommand.Add("terrain_menu", function()
         customChoices:AddChoice("Domes Infinite", "local a = ((x * 0.5 + 0.5) % 1) * 2 - 1\nlocal b = ((y * 0.5 + 0.5) % 1) * 2 - 1\nreturn sqrt(1 - (a^2 + b^2)) * 10")
         customChoices:AddChoice("BlackHole", "return -30 / sqrt(x^2+y^2) + 100")
         customChoices:AddChoice("Spiral", "return (60/7.5) * sqrt(x^2 + y^2) + 0.18 * cos((80/7.5) * sqrt(x^2+y^2) + atan2(x,y)) * 60/7.5")
+        customChoices:AddChoice("Checkerboard", "return (Round(x)%2 + Round(y)%2) % 2 * 10")
+        customChoices:AddChoice("Basic Perlin Implementation", "return Simplex.Noise2D(x / 3, y / 3) * 10 + Simplex.Noise2D(x, y)")
+        customChoices:AddChoice("Avatar: The Last Airbender", "return Simplex.Noise2D(x / 3, y / 3) * 200")
         customChoices:AddChoice("Mee Graph", "local values = \n{1,1,0,0,0,1,1,0,0,1,1,1,1,1,1,0,0,0,1,1,1,1,1,1,0,0,1,1,1,0,1,1,1,0,0,1,1,0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,1,1,1,1,1,1,1,0,0,1,1,1,1,1,0,0,0,0,1,1,1,1,1,0,0,0,1,1,0,1,0,1,1,0,0,1,1,0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,1,1,0,0,0,1,1,0,0,1,1,0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,1,1,0,0,0,1,1,0,0,1,1,1,1,1,1,0,0,0,1,1,1,1,1,1,0,0}\nlocal localX = -floor(((x * 4) - 26) / 2)\nlocal localY = (floor((y + 5) * 2) * 26)\nif localX < 0 or localX > 26 then\nreturn 0\nend\nreturn (values[localX + localY] or 0) * 10")
         function customChoices:OnSelect(index, text, data)
             func:SetText(data)
@@ -264,37 +272,39 @@ concommand.Add("terrain_menu", function()
         local scrollPanel = vgui.Create("DScrollPanel", tabs)
         local scrollEditTab = tabs:AddSheet("Water", scrollPanel, "icon16/water.png").Tab
 
+        local waterEnabled
         local waterHeight = vgui.Create("DNumSlider", scrollPanel)
-        waterHeight:SetPos(0, 0)
+        waterHeight:SetPos(0, 25)
         waterHeight:SetSize(410, 15)
-        waterHeight:SetText("Water Level")
-        waterHeight:SetMinMax(-12000, 0)
-        waterHeight:SetValue(-12000)
+        waterHeight:SetText("Water Height")
+        waterHeight:SetMinMax(-12765, 12765)
+        waterHeight:SetValue(options.waterHeight or 0)
         waterHeight:SetDecimals(0)
         waterHeight:SetDark(true)
         function waterHeight:OnValueChanged(val)
-            
+            options.waterHeight = val
+            Terrain.Variables.temp_waterHeight = val
+            waterEnabled:SetValue(true)
+        end
+
+        waterEnabled = vgui.Create("DCheckBoxLabel", scrollPanel)
+        waterEnabled:SetPos(0, 0)
+        waterEnabled:SetSize(16, 16)
+        waterEnabled:SetText("Enable Water?")
+        waterEnabled:SetValue(options.waterHeight and true or false)
+        waterEnabled:SetTextColor(Color(0, 0, 0))
+        function waterEnabled:OnChange(val)
+            if val then 
+                options.waterHeight = waterHeight:GetValue()
+                Terrain.Variables.temp_waterHeight = waterHeight:GetValue()
+            else
+                Terrain.Variables.temp_waterHeight = -math.huge
+                options.waterHeight = nil
+            end
         end
     end
 
-    local function settingsTab(tabs)
-        local scrollPanel = vgui.Create("DScrollPanel", tabs)
-        local scrollEditTab = tabs:AddSheet("Client Settings", scrollPanel, "icon16/page_white_gear.png").Tab
-
-        local lodDistance = vgui.Create("DNumSlider", scrollPanel)
-        lodDistance:SetPos(0, 0)
-        lodDistance:SetSize(410, 15)
-        lodDistance:SetText("LOD Distance (in hammer units)")
-        lodDistance:SetMinMax(0, 10000)
-        lodDistance:SetValue(math.sqrt(Terrain.LODDistance))
-        lodDistance:SetDecimals(0)
-        lodDistance:SetDark(true)
-        function lodDistance:OnValueChanged(val)
-            Terrain.LODDistance = val^2
-        end
-    end
-
-    -- minimap ortho view
+    // minimap ortho view
     local zoomAmount = 1
     local renderBox = vgui.Create("DPanel", mainFrame)
 	renderBox:SetSize(350, 360)
@@ -326,7 +336,7 @@ concommand.Add("terrain_menu", function()
         })
         DisableClipping(old)
     end
-    -- ortho zoom slider
+    // ortho zoom slider
     local renderZoom = vgui.Create("DNumSlider", mainFrame)
 	renderZoom:SetPos(50, 374)
 	renderZoom:SetSize(300, 10)
@@ -345,9 +355,8 @@ concommand.Add("terrain_menu", function()
     functionTab(tabs)
     treeTab(tabs)
     waterTab(tabs)
-    settingsTab(tabs)
 
-    -- test & submit changes button
+    // test & submit changes button
     if LocalPlayer():IsSuperAdmin() then 
         local submitButton = vgui.Create("DButton", tabsFrame)
         submitButton:SetPos(250, 305)
@@ -356,7 +365,7 @@ concommand.Add("terrain_menu", function()
         submitButton:SetText("     Submit Changes")
         function submitButton:DoClick()
             net.Start("TERRAIN_SEND_DATA")
-            net.WriteTable(options)    -- writetable since value types may change during development
+            net.WriteTable(options)    // writetable since value types may change during development
             net.SendToServer()
             changedTerrain = false
         end
@@ -370,9 +379,9 @@ concommand.Add("terrain_menu", function()
     function testButton:DoClick() 
         local newFunction = Terrain.BuildMathFunc(options)
 
-        -- reload all chunks with the new function
+        // reload all chunks with the new function
         for k, v in ipairs(ents.FindByClass("terrain_chunk")) do
-            --v:BuildCollision(newFunction) -- this shit crashes u
+            //v:BuildCollision(newFunction) // this shit crashes u
             v:GenerateMesh(newFunction)
             v:GenerateTrees(newFunction, options)
             v:SetRenderBounds(v:OBBMins() * Vector(1, 1, -1), v:OBBMaxs() + Vector(0, 0, 1000))
