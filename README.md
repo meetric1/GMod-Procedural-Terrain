@@ -2,7 +2,7 @@
 My procedural terrain addon for Garrys Mod
 
 If you want to try this for yourself, download and extract the code to GarrysMod/garrysmod/addons
-##### AS OF NOW IT REQUIRES EP2 TO BE MOUNTED!
+##### AS OF NOW IT REQUIRES EP2 AND TF2 TO BE MOUNTED!
 
 ### Current Features: 
 - Custom entity that acts as a displacement
