@@ -22,4 +22,5 @@ If you want to try this for yourself, download and extract the code to GarrysMod
 - Import actual models instead of using them from EP2
 - Fix a crash related to the 32Bit branch of gmod
 - More customizable features in the menu
+- Better multiplayer support
 
