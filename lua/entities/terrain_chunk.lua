@@ -338,6 +338,12 @@ end
 
 // create the collision mesh for the chunk, runs on server & client
 function ENT:BuildCollision(heightFunction)
+    if CLIENT and jit.arch == "x86" then 
+        self:SetRenderBounds(Vector(0, 0, 0), Vector(1, 1, 1000) * Terrain.ChunkResScale + Vector(0, 0, 1000)) // add 1000 units for trees
+        print("CLIENT IS ON 32 BIT, PREVENTING INCOMING CRASH BY NOT GENERATING PHYSICS OBJECT") 
+        return 
+    end  // no collision for 32 bit because funny memory leak crashing hahaha
+
     local heightFunction = heightFunction or Terrain.MathFunc
 
     // main base terrain
@@ -401,13 +407,15 @@ function ENT:BuildCollision(heightFunction)
     self:PhysicsDestroy()
 	self:PhysicsFromMesh(finalMesh)
 
-    if CLIENT then 
-        self:SetRenderBounds(self:OBBMins(), self:OBBMaxs() + Vector(0, 0, 1000)) // add 1000 units for trees
-    end 
+    if CLIENT then
+        self:SetRenderBounds(self:OBBMins(), self:OBBMaxs() + Vector(0, 0, 1000))
+    end
 end
 
 
 function ENT:Initialize()
+    if CLIENT then return end
+
     self:SetModel("models/props_c17/FurnitureCouch002a.mdl")
     self:BuildCollision()
     self:SetSolid(SOLID_VPHYSICS)
@@ -418,19 +426,29 @@ function ENT:Initialize()
     self:GetPhysicsObject():SetMass(50000)  // max weight, should help a bit with the physics solver
     self:GetPhysicsObject():SetPos(self:GetPos())
     self:DrawShadow(false)
+end
 
-    if !Terrain.ClientLoaded then return end    // clientloaded will never exist on server
+function ENT:ClientInitialize()
+    //if !Terrain.ClientLoaded then return end
 
     self.OffsetMatrix = Matrix()
     self.OffsetMatrix:SetTranslation(self:GetPos())
     self.OffsetMatrix:SetScale(Vector(1, 1, 1))
+    self:BuildCollision()
+    if self:GetPhysicsObject():IsValid() then
+        self:GetPhysicsObject():EnableMotion(false)
+        self:GetPhysicsObject():SetMass(50000)  // make sure to call these on client or else when your ragdoll dies you crash!
+        self:GetPhysicsObject():SetPos(self:GetPos())
+    end
     self:GenerateMesh()
     self:GenerateTrees()
     self:GenerateGrass()
 
     // if its the last chunk, generate the lightmap
     if self:GetChunkX() == -Terrain.Resolution and self:GetChunkY() == -Terrain.Resolution then
-        Terrain.GenerateLightmap(1024)
+        timer.Simple(2, function()
+            Terrain.GenerateLightmap(1024)
+        end)
     end
 end
 
@@ -484,7 +502,7 @@ local math_Distance = math.Distance
 // this MUST be optimized as much as possible, it is called multiple times every frame
 function ENT:GetRenderMesh()
     //print(Terrain.ClientLoaded)
-    if !Terrain.ClientLoaded then return end
+    if !self.TreeMatrices then return end
     // set a lightmap texture to be used instead of the default one
     render_SetLightmapTexture(lm)
     local selfpos = (self:GetPos() + self:OBBCenter())
