@@ -1,4 +1,5 @@
 
+
 AddCSLuaFile()
 
 ENT.Type = "anim"
@@ -11,10 +12,11 @@ ENT.Purpose			= ""
 ENT.Instructions	= ""
 ENT.Spawnable		= false
 
+if game.GetMap() != "gm_flatgrass" then return end
+
 function ENT:SetupDataTables()
 	self:NetworkVar("Int", 0, "ChunkX")
     self:NetworkVar("Int", 1, "ChunkY")
-    self:NetworkVar("Bool", 0, "Overhang")
 end
 
 Terrain = Terrain or {}
@@ -50,6 +52,8 @@ function ENT:GetTreeData(pos, data, heightFunction)
     local middleHeight = Vector(0, 0, vertexHeight)
 
     local finalPos = Vector(x + chunkoffsetx, y + chunkoffsety, vertexHeight + Terrain.ZOffset - 25.6 * data.treeHeight) // pushed down 25.6 units, (height of the base of the tree model)
+
+    // no trees under water
     if data.waterHeight and finalPos[3] < data.waterHeight then return nil end
 
     // calculate the smoothed normal, if it is extreme, do not place a tree
@@ -90,8 +94,8 @@ function ENT:GenerateTrees(heightFunction, data)
     self.TreeMatrices = {}
     self.TreeModels = {}
     self.TreeShading = {}
+    self.TreeColors = {}
 
-    if self:GetOverhang() then return end
     local treeMultiplier = Terrain.ChunkResolution / data.treeResolution * Terrain.ChunkSize
     local randomIndex = 0
     local chunkIndex = tostring(self:GetChunkX()) .. tostring(self:GetChunkY())
@@ -111,10 +115,13 @@ function ENT:GenerateTrees(heightFunction, data)
             m:SetTranslation(finalPos)
             m:SetAngles(Angle(0, randseedx * 3600, 0))//smoothedNormal:Angle() + Angle(90, 0, 0) Angle(0, randseedx * 3600, 0)
             m:SetScale(Vector(1, 1, 1) * data.treeHeight)
-            finalPos[3] = finalPos[3] + 256 * data.treeHeight  // add tree height
+            finalPos[3] = finalPos[3] + 823 * data.treeHeight  // add tree height
             table.insert(self.TreeMatrices, m)
-            table.insert(self.TreeModels, math.floor(util.SharedRandom("TerrainModel" .. chunkIndex, 0, #Terrain.TreeModels - 0.9, randomIndex)) + 1)  // 4.1 means 1/50 chance for a rock to generate instead of a tree
-            table.insert(self.TreeShading, util.TraceLine({start = finalPos, endpos = finalPos + Terrain.SunDir * 99999}).HitSky and 1.5 or 0.5)
+            local modelIndex = math.floor(util.SharedRandom("TerrainModel" .. chunkIndex, 0, #Terrain.TreeModels - 0.9, randomIndex)) + 1
+            table.insert(self.TreeModels, modelIndex)  // 4.1 means 1/50 chance for a rock to generate instead of a tree
+            local shading = util.TraceLine({start = finalPos, endpos = finalPos + Terrain.SunDir * 99999}).HitSky and 1.5 or 0.5
+            table.insert(self.TreeShading, shading)
+            table.insert(self.TreeColors, modelIndex != 5 and Vector(shading, shading, shading) * data.treeColor or Vector(shading, shading, shading))
         end
     end
 end
@@ -263,7 +270,7 @@ end
 local grassAmount = 104
 function ENT:GenerateGrass()
     self.GrassMesh = Mesh()
-    if self:GetOverhang() or !Terrain.Variables.generateGrass then return end
+    if !Terrain.Variables.generateGrass then return end
     local grassSize = Terrain.Variables.grassSize
 
     local mesh = mesh
@@ -292,6 +299,7 @@ function ENT:GenerateGrass()
                 // the height of the vertex using the math function
                 local vertexHeight = Terrain.MathFunc(worldx + chunkoffsetx, worldy + chunkoffsety, self) 
                 local mainPos = Vector(chunkoffsetx + worldx, chunkoffsety + worldy, vertexHeight + Terrain.ZOffset)
+                if Terrain.Variables.waterHeight and mainPos[3] < Terrain.Variables.waterHeight then continue end
 
                 local randbrushx = math.floor(((randoffsetx * 9999) % 1) * 3) * 0.3 
                 local randbrushy = math.floor(((randoffsety * 9999) % 1) * 3) * 0.3 
@@ -359,7 +367,8 @@ function ENT:BuildCollision(heightFunction)
 	end
 
     // tree collision
-    if !self:GetOverhang() then 
+    // crashes if this is generated on client, guess trees & rocks will be buggy to interact with.. oh well
+    if SERVER then 
         local data = Terrain.Variables
         data.treeMultiplier = Terrain.ChunkResolution / data.treeResolution * Terrain.ChunkSize
         local randomIndex = 0
@@ -399,20 +408,6 @@ end
 
 
 function ENT:Initialize()
-    if CLIENT then
-        self.OffsetMatrix = Matrix()
-        self.OffsetMatrix:SetTranslation(self:GetPos())
-        self.OffsetMatrix:SetScale(Vector(1, 1, 1))
-        self:GenerateMesh()
-        self:GenerateTrees()
-        self:GenerateGrass()
-
-        // if its the last chunk, generate the lightmap
-        if self:GetChunkX() == -Terrain.Resolution and self:GetChunkY() == -Terrain.Resolution then
-            Terrain.GenerateLightmap(1024)
-        end
-    end
-
     self:SetModel("models/props_c17/FurnitureCouch002a.mdl")
     self:BuildCollision()
     self:SetSolid(SOLID_VPHYSICS)
@@ -423,6 +418,20 @@ function ENT:Initialize()
     self:GetPhysicsObject():SetMass(50000)  // max weight, should help a bit with the physics solver
     self:GetPhysicsObject():SetPos(self:GetPos())
     self:DrawShadow(false)
+
+    if !Terrain.ClientLoaded then return end    // clientloaded will never exist on server
+
+    self.OffsetMatrix = Matrix()
+    self.OffsetMatrix:SetTranslation(self:GetPos())
+    self.OffsetMatrix:SetScale(Vector(1, 1, 1))
+    self:GenerateMesh()
+    self:GenerateTrees()
+    self:GenerateGrass()
+
+    // if its the last chunk, generate the lightmap
+    if self:GetChunkX() == -Terrain.Resolution and self:GetChunkY() == -Terrain.Resolution then
+        Terrain.GenerateLightmap(1024)
+    end
 end
 
 // it has to be transmitted to the client always because its like, the world
@@ -459,41 +468,7 @@ end
 if SERVER then return end
 
 local lm = Terrain.Lightmap
-local treeMaterial = Material("models/props_foliage/arbre01")   //models/props_foliage/arbre01
-local rockMaterial = Material("models/props_foliage/coastrock02")
 local detailMaterial = Material("detail/detailsprites")  // detail/detailsprites models/props_combine/combine_interface_disp
-//local waterMaterial = Material("effects/water_warp")
-local waterMaterial = CreateMaterial("Terrain_Water01", "Refract", {
-    ["$alpha"]                  	=	1,
-    ["$bumpframe"]              	=	55,
-    ["$bumpmap"]	                =	"dev/water_dudv",
-    ["$color"]                     	=	"[1 1 1]",
-    ["$color2"]                 	=	"[1 1 1]",
-    ["$envmapsaturation"]	        =	1,
-    ["$envmaptint"]             	=	"[1 1 1]",
-    ["$fresnelreflection"]      	=   1,
-    ["$localrefractdepth"]         	=   0.05,
-    //["$normalmap"]              	=   Texture [water/tfwater001_normal]
-    ["$refractamount"]          	=   0.05,
-    ["$refractblur"]            	=   1,
-    ["$refracttint"]            	=   "[0.618686 0.7593 1]",
-    ["$scale"]                  	=   "[1 1 0]",
-    ["$srgbtint"]	                =   "[1 1 1]",
-    ["$model"]                      =   1,  
-
-    ["$treesway"]                   =   1,
-    ["$treeswayheight"]             =   1000,
-    ["$treeswaystartheight"]        =   0,
-    ["$treeswayradius"]             =   1000,
-    ["$treeswaystartradius"]        =   0,
-    ["$treeswayscrumblespeed"]      =   200,
-    ["$treeswayscrumblestrength"]   =   200,
-    ["$treeswayscrumblefrequency"]  =   400,
-    ["$treeswayfalloffexp"]         =   1000,
-    ["$treeswayspeed"]              =   1000,
-    ["$treeswayscrumblefalloffexp"] =   1,
-
-})
 
 // cache ALL of these for faster lookup
 local renderTable = {Material = Terrain.Material}
@@ -508,6 +483,8 @@ local math_Distance = math.Distance
 
 // this MUST be optimized as much as possible, it is called multiple times every frame
 function ENT:GetRenderMesh()
+    //print(Terrain.ClientLoaded)
+    if !Terrain.ClientLoaded then return end
     // set a lightmap texture to be used instead of the default one
     render_SetLightmapTexture(lm)
     local selfpos = (self:GetPos() + self:OBBCenter())
@@ -517,6 +494,7 @@ function ENT:GetRenderMesh()
     local lod = math_DistanceSqr(selfpos[1], selfpos[2], eyepos[1], eyepos[2]) < Terrain.LODDistance
     local models = self.TreeModels
     local lighting = self.TreeShading
+    local color = self.TreeColors
     local materials = Terrain.TreeMaterials
     local flashlightOn = LocalPlayer():FlashlightIsOn()
 
@@ -529,7 +507,7 @@ function ENT:GetRenderMesh()
     // render foliage
     if lod then // chunk is near us, render high quality foliage
         // render grasses if chunks are near
-        if self.GrassMesh then 
+        if self.GrassMesh and self.GrassMesh:IsValid() then 
             render_SetMaterial(detailMaterial)
             self.GrassMesh:Draw()
         end
@@ -546,12 +524,14 @@ function ENT:GetRenderMesh()
             end
 
             // give the tree its shading
-            local light = lighting[k]
-            if light != lastlight then
-                render_SetModelLighting(0, light, light, light)
+            local tree_color = color[k]
+            if tree_color != lastlight then
+                local light = lighting[k]
+                local light_2 = light * 0.45
+                render_SetModelLighting(0, light_2, light_2, light_2)
                 render_SetModelLighting(2, light, light, light)
-                render_SetModelLighting(4, light, light, light)
-                lastlight = light
+                render_SetModelLighting(4, tree_color[1], tree_color[2], tree_color[3])
+                lastlight = tree_color
             end
 
             // push custom matrix generated earlier and render the tree
@@ -577,12 +557,14 @@ function ENT:GetRenderMesh()
             end
 
             // give the tree its shading
-            local light = lighting[k]
-            if light != lastlight then
-                render_SetModelLighting(0, light, light, light)
+            local tree_color = color[k]
+            if tree_color != lastlight then
+                local light = lighting[k]
+                local light_2 = light * 0.45
+                render_SetModelLighting(0, light_2, light_2, light_2)
                 render_SetModelLighting(2, light, light, light)
-                render_SetModelLighting(4, light, light, light)
-                lastlight = light
+                render_SetModelLighting(4, tree_color[1], tree_color[2], tree_color[3])
+                lastlight = tree_color
             end
 
             // push custom matrix generated earlier and render the tree
@@ -597,40 +579,3 @@ function ENT:GetRenderMesh()
     return renderTable
 end
 
-local uvscale = 100
-local waterMesh = Mesh()
-waterMesh:BuildFromTriangles({
-    {pos = Vector(-1, -1, 0), u = 0, v = uvscale},
-    {pos = Vector(1, 1, 0), u = uvscale, v = 0},
-    {pos = Vector(1, -1, 0), u = uvscale, v = uvscale},
-
-    {pos = Vector(-1, -1, 0), u = 0, v = uvscale},
-    {pos = Vector(-1, 1, 0), u = 0, v = 0},
-    {pos = Vector(1, 1, 0), u = uvscale, v = 0},
-
-    {pos = Vector(-1, -1, 0), u = 0, v = uvscale},
-    {pos = Vector(1, -1, 0), u = uvscale, v = uvscale},
-    {pos = Vector(1, 1, 0), u = uvscale, v = 0},
-
-    {pos = Vector(-1, -1, 0), u = 0, v = uvscale},
-    {pos = Vector(1, 1, 0), u = uvscale, v = 0},
-    {pos = Vector(-1, 1, 0), u = 0, v = 0},
-})
-
-// todo: optimize water & use imported material instead of relying on TF2
-local waterMatrix = Matrix()
-waterMatrix:SetScale(Vector(Terrain.ChunkResScale * Terrain.Resolution, Terrain.ChunkResScale * Terrain.Resolution))
-
-hook.Add("PreDrawTranslucentRenderables", "Terrain_Water", function(_, sky)
-    if sky then return end
-    local waterHeight = Terrain.Variables.temp_waterHeight or Terrain.Variables.waterHeight
-    if waterHeight then
-        waterMaterial:SetTexture("$normalmap", "water/tfwater001_normal")
-        waterMatrix:SetTranslation(Vector(0, 0, waterHeight))
-        render_SetMaterial(waterMaterial)
-        cam_PushModelMatrix(waterMatrix)
-            waterMesh:Draw()
-        cam_PopModelMatrix()
-    end
-end)
-hook.Remove("PostDrawTranslucentRenderables", "Terrain_Water")

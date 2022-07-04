@@ -1,0 +1,11 @@
+"VertexLitGeneric"
+{
+
+	"$basetexture" "procedural_terrain\foliage\coastrock02"
+	"$surfaceprop" "rock"
+	"$detail" "Detail/rock_detail_01"
+	"$detailscale" "7"
+	"$detailblendfactor" .9
+	"$detailblendmode" 0
+}
+

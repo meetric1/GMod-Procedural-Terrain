@@ -14,9 +14,12 @@ Terrain.LODDistance = 5000^2
 Terrain.ZOffset = -12770
 Terrain.SunDir = Vector(0.414519, 0.279596, 0.866025)	//default flatgrass sun direction
 Terrain.Variables = {	// variables that are networked
-	height = 50,	// height multiplier
-	noiseScale = 20,	
-	offset = 0.5,		// z offset
+	height_1 = 50,	// height multiplier
+	noiseScale_1 = 20,	
+	height_2 = 5,	// height multiplier
+	noiseScale_2 = 2,	
+
+	offset = 0,		// z offset
 	seed = 21,		
 	treeHeight = 2,
 	treeResolution = 10,
@@ -27,6 +30,11 @@ Terrain.Variables = {	// variables that are networked
 	spawnArea = true,	// give the flatgrass building space or not
 	generateGrass = true,
 	grassSize = 25,
+	treeColor = Vector(1, 1, 1),
+
+	material_1 = "gm_construct/grass1",	// terrain main material
+	material_2 = "nature/rockfloor005a", // terrain secondary, rock material
+	material_3 = "procedural_terrain/water/water_warp", // water material
 }
 
 local invMagicNumber = 1 / 2048
@@ -65,19 +73,18 @@ function Terrain.BuildMathFunc(values)
 
 		x = x + (values.seed * randomNum)
 
-		local final = Terrain.Simplex.Noise2D(x / values.noiseScale, y / values.noiseScale)
+		local final = Terrain.Simplex.Noise2D(x / values.noiseScale_1, y / values.noiseScale_1) * values.height_1
 		if values.clampNoise then final = math.Max(final, 0) end
-		local final = final + Terrain.Simplex.Noise2D(x / values.noiseScale * 10, y / values.noiseScale * 10) * 0.1
+		final = final + Terrain.Simplex.Noise2D(-x / values.noiseScale_2, -y / values.noiseScale_2) * values.height_2
 		
 		x = x - (values.seed * randomNum)
 
-		final = final * values.height
 		final = final + values.offset
 	
 		// finalize the value
 		if values.spawnArea then final = ((math.abs(x) < 0.7 and math.abs(y) < 0.7) and 0.05 or final) end	//spawn region gets space
 		final = math.Clamp(final, 0, 100)
-		return (chunk and chunk:GetOverhang()) and (100 - final) * 256 or final * 256	     // cave support
+		return final * 256	    
 	end
 end
 
@@ -88,6 +95,7 @@ if SERVER then return end
 Terrain.Lightmap = GetRenderTarget("Terrain_Lightmap", Terrain.LightmapRes, Terrain.LightmapRes)
 render.ClearRenderTarget(Terrain.Lightmap, Color(127, 127, 127, 255))
 
+// stolen tri intersection function lol
 local function intersectRayWithTriangle(rayOrigin, rayDir, tri1, tri2, tri3)
 	local point1 = tri1
 	local edge1 = tri2 - point1
@@ -132,9 +140,20 @@ local function generateLightmap(res, heightFunction)
 	end
 	local function traceFunc(e) return IsValid(e) and e:GetClass() == "terrain_chunk" end
 	local res = res - 1
+
+	local done = 0
+	local sizex = ScrW() * 0.5
+	local sizey = ScrH() * 0.02
+	hook.Add("HUDPaint", "terrain_lightload", function()
+		surface.SetDrawColor(Color(0, 0, 0, 255))
+		surface.DrawRect(sizex - 110, sizey, 220, 20)
+		draw.DrawText("Baking lighting.. " .. math.Round(done / res * 100) .. "% done", "TargetID", sizex, sizey, color_white, TEXT_ALIGN_CENTER)
+	end)
+
 	for y = 0, res do
 		render.PushRenderTarget(Terrain.Lightmap)
 			cam.Start2D()
+				done = y
 				for x = 0, res do
 					local worldx = (x / res) * globalTerrainScale
 					local worldy = (y / res) * globalTerrainScale
@@ -184,6 +203,7 @@ local function generateLightmap(res, heightFunction)
 		render.PopRenderTarget()
 		coroutine.yield()
 	end
+	hook.Remove("HUDPaint", "terrain_lightload")
 end
 
 function Terrain.GenerateLightmap(res, heightFunction)
@@ -198,4 +218,15 @@ function Terrain.GenerateLightmap(res, heightFunction)
 		end
 	end)
 end
+
+-- initialize a menu option 
+hook.Add("PopulateToolMenu", "terrain_menu", function()
+	spawnmenu.AddToolMenuOption("Utilities", "Procedural Terrain", "Procedural_Terrain", "Terrain", "", "",function(panel)
+		panel:ClearControls()
+		panel:Button("Terrain Menu", "terrain_menu")
+		panel:Help("\nfunny stuff")
+		panel:Button("removes all textures", "pp_texturize", "0")
+		panel:Button("puts them back", "pp_texturize", "")
+	end)
+end)
 
