@@ -16,11 +16,9 @@ If you want to try this for yourself, download and extract the code to GarrysMod
 - Better performance than other displacement forest maps such as gm_fork and gm_boreas
 - Tree & Rock collision
 - Lakes / water system
+- Imported models 
+- Multiplayer Support
 
 ### Planned Features & Bugfixes:
-- Seasons/Biomes
-- Import actual models instead of using them from EP2
-- Fix a crash related to the 32Bit branch of gmod
-- More customizable features in the menu
-- Better multiplayer support
+- Saving / Loading system
 
