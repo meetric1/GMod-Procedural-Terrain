@@ -133,6 +133,7 @@ local function generateLightmap(res, heightFunction)
 	local surface_SetDrawColor = surface.SetDrawColor	// faster lookup
 	local surface_DrawRect = surface.DrawRect
 	local globalTerrainScale = Terrain.ChunkResScale * Terrain.Resolution
+	local waterHeight = Terrain.Variables.waterHeight
 	local util_TraceLine = util.TraceLine
 	local lightmapMultiplier = Terrain.LightmapRes / res
 	local function getHeight(x, y)
@@ -195,6 +196,8 @@ local function generateLightmap(res, heightFunction)
 					else	// sunlight does not hit it because it is angled away from the sun
 						shadowAmount = 64
 					end
+
+					shadowAmount = shadowAmount - math.Clamp( (- getHeight(worldx,worldy).z + waterHeight) * 0.2, 0, 48 )
 
 					surface_SetDrawColor(shadowAmount, shadowAmount, shadowAmount, 255)
 					surface_DrawRect(x * lightmapMultiplier, y * lightmapMultiplier, lightmapMultiplier, lightmapMultiplier)
