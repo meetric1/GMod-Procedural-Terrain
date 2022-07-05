@@ -378,7 +378,7 @@ concommand.Add("terrain_menu", function()
         waterText:SetPos(0, 50)
         waterText:SetSize(250, 20)
         waterText:SetColor(Color(0, 0, 0))
-        waterText:SetText("Water Material (only really works with transparent materials)")
+        waterText:SetText("Water Material (better with transparent materials)")
 
         local material_water = vgui.Create("DTextEntry", scrollPanel)
         material_water:SetPos(0, 70)
@@ -390,6 +390,52 @@ concommand.Add("terrain_menu", function()
         function material_water:OnValueChange(val)
             if val == "" then val = material_water:GetPlaceholderText() end
             options.material_3 = val
+        end
+
+        // instant kill water
+        local water_var = vgui.Create("DCheckBoxLabel", scrollPanel)
+        water_var:SetPos(0, 100)
+        water_var:SetSize(16, 16)
+        water_var:SetText("Water = Instant Death")
+        water_var:SetValue(options.water_kill)
+        water_var:SetTextColor(Color(0, 0, 0))
+        function water_var:OnChange(val)
+            options.water_kill = val
+        end
+
+        // ignite water
+        local water_var = vgui.Create("DCheckBoxLabel", scrollPanel)
+        water_var:SetPos(0, 125)
+        water_var:SetSize(16, 16)
+        water_var:SetText("Catch on fire if touch water? (good for lava)")
+        water_var:SetValue(options.water_ignite)
+        water_var:SetTextColor(Color(0, 0, 0))
+        function water_var:OnChange(val)
+            options.water_ignite = val
+        end
+
+        local water_viscosity = vgui.Create("DNumSlider", scrollPanel)
+        water_viscosity:SetPos(0, 150)
+        water_viscosity:SetSize(410, 15)
+        water_viscosity:SetText("Water Viscocity")
+        water_viscosity:SetMinMax(-10, 10)
+        water_viscosity:SetValue(options.water_viscosity)
+        water_viscosity:SetDecimals(2)
+        water_viscosity:SetDark(true)
+        function water_viscosity:OnValueChanged(val)
+            options.water_viscosity = val
+        end
+
+        local water_buoyancy = vgui.Create("DNumSlider", scrollPanel)
+        water_buoyancy:SetPos(0, 175)
+        water_buoyancy:SetSize(410, 15)
+        water_buoyancy:SetText("Buoyancy Multiplier")
+        water_buoyancy:SetMinMax(-100, 100)
+        water_buoyancy:SetValue(options.water_buoyancy)
+        water_buoyancy:SetDecimals(2)
+        water_buoyancy:SetDark(true)
+        function water_buoyancy:OnValueChanged(val)
+            options.water_buoyancy = val
         end
     end
 

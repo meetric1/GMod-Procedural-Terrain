@@ -2,6 +2,7 @@ if game.GetMap() != "gm_flatgrass" then return end
 
 local gravity_convar = GetConVar("sv_gravity")
 
+
 // stolen tri intersection function lol
 local function intersectRayWithTriangle(rayOrigin, rayDir, tri1, tri2, tri3)
     local point1 = tri1
@@ -95,7 +96,22 @@ end)
 // main movement
 hook.Add("Move", "Terrain_Swimming", function(ply, move)
     if !inWater(ply:GetPos()) then return end
-    if Terrain.Variables.waterKill then ply:Kill() return end
+    if SERVER then
+        if Terrain.Variables.water_kill and ply:Alive() then 
+            ply:Kill() 
+            return 
+        end
+        local onfire = ply:IsOnFire()
+        if ply:Alive() then
+            if Terrain.Variables.water_ignite then 
+                if !onfire then
+                    ply:Ignite(1) 
+                end
+            elseif onfire then
+                ply:Extinguish()
+            end
+        end
+    end 
 
 	local vel = move:GetVelocity()
 	local ang = move:GetMoveAngles()
@@ -113,8 +129,8 @@ hook.Add("Move", "Terrain_Swimming", function(ply, move)
 	    acel.z = acel.z + ply:GetMaxSpeed()
 	end
 
-	vel = vel + acel * FrameTime()
-	vel = vel * (1 - FrameTime() * 2)
+	vel = vel + acel * FrameTime() * (1 / (Terrain.Variables.water_viscosity * 0.5 + 0.5))
+	vel = vel * (1 - FrameTime() * 2) + Vector(0, 0, Terrain.Variables.water_buoyancy - 1)
 
 	local pgrav = ply:GetGravity() == 0 and 1 or ply:GetGravity()
 	local gravity = pgrav * gravity_convar:GetFloat() * 0.5
@@ -193,3 +209,81 @@ hook.Add("GetFallDamage", "Terrain_Water", function(ply, speed)
     })
     if tr.Hit and inWater(tr.HitPos) then return 0 end
 end)
+
+
+if SERVER then
+    local IsValid = IsValid
+    local Clamp = math.Clamp
+    local timer = timer
+    local positions = {}
+    local valid_materials = {
+        ["floating_metal_barrel"] = true,
+        ["wood"] = true,
+        ["wood_crate"] = true,
+        ["wood_furniture"] = true,
+        ["rubbertire"] = true,
+        ["wood_solid"] = true,
+    }
+    hook.Add("Think", "terrain_buoyancy", function()
+        local waterHeight = Terrain.Variables.waterHeight // add 5 so the objects dont stay all the way under water
+        local entities = ents.FindByClass("prop_*")
+        for _, prop in ipairs(entities) do
+            local phys = prop:GetPhysicsObject()
+            if !phys:IsValid() or phys:IsAsleep() then continue end
+
+            local is_airboat = prop:GetClass() == "prop_vehicle_airboat"
+            if valid_materials[phys:GetMaterial()] or is_airboat then 
+                local mins = prop:OBBMins()
+                local maxs = prop:OBBMaxs()
+
+                // do not calculate object, we know it is too far and not near the water
+                local p = prop:GetPos()[3] - 1
+                if p - math.abs(mins[3]) > waterHeight and p - math.abs(maxs[3]) > waterHeight then
+                    continue
+                end
+
+                // why is the airboat size fucked?
+                if is_airboat then 
+                    mins = mins * 0.5
+                    maxs = maxs * 0.5
+                    mins[3] = 0
+                    maxs[3] = 0
+                end
+
+                // so many points
+                positions[1] = Vector(mins[1], mins[2], mins[3])
+                positions[2] = Vector(mins[1], mins[2], maxs[3])
+                positions[3] = Vector(mins[1], maxs[2], mins[3])
+                positions[4] = Vector(maxs[1], mins[2], mins[3])
+                positions[5] = Vector(mins[1], maxs[2], maxs[3])
+                positions[6] = Vector(maxs[1], maxs[2], mins[3])
+                positions[7] = Vector(maxs[1], mins[2], maxs[3])
+                positions[8] = Vector(maxs[1], maxs[2], maxs[3])
+
+                local prop_inwater = false
+                local should_sleep = (phys:GetVelocity() + phys:GetAngleVelocity()):Length() < 1 and !prop:IsPlayerHolding()
+                local viscosity = Terrain.Variables.water_viscosity
+                local buoyancy = Terrain.Variables.water_buoyancy
+                for _, pos in ipairs(positions) do
+                    local world_pos = prop:LocalToWorld(pos)
+                    if inWater(world_pos) then
+                        if is_airboat then
+                            phys:ApplyForceOffset(Vector(0, 0, phys:GetMass() * math.min(((waterHeight - world_pos[3]) * 0.75 * buoyancy), 2 * buoyancy)), world_pos)
+                            phys:ApplyForceCenter(phys:GetMass() * phys:GetVelocity() * viscosity * -0.001)   //dampen very small bit for airboats
+                        else
+                            phys:ApplyForceOffset(Vector(0, 0, phys:GetMass() * (math.min(((waterHeight - world_pos[3]) * 0.1 * buoyancy), 3 * buoyancy))), world_pos)
+                            phys:ApplyForceCenter(phys:GetMass() * phys:GetVelocity() * viscosity * -0.01)   //dampen a bit
+                        end
+                        phys:AddAngleVelocity(phys:GetAngleVelocity() * viscosity * -0.01)
+                        prop_inwater = true
+                        //debugoverlay.Sphere(world_pos, 10, 0.1)
+                    end
+                end
+
+                if prop_inwater and should_sleep then
+                    phys:Sleep()
+                end
+            end
+        end
+    end)
+end

@@ -6,8 +6,8 @@ if SERVER then resource.AddWorkshop("2830138108") end
 
 Terrain = Terrain or {}
 Terrain.ChunkSize = 256
-Terrain.Resolution = 3
-Terrain.ChunkResolution = 20
+Terrain.Resolution = 6
+Terrain.ChunkResolution = 10
 Terrain.LightmapRes = 1024
 Terrain.ChunkResScale = Terrain.ChunkSize * Terrain.ChunkResolution
 Terrain.Chunks = Terrain.Chunks or {}
@@ -24,7 +24,7 @@ Terrain.Variables = {	// variables that are networked
 	offset = 0,		// z offset
 	seed = 21,		
 	treeHeight = 2,
-	treeResolution = 10,
+	treeResolution = 5,
 	treeThreshold = 0.35,
 	waterHeight = -12300,
 	clampNoise = true,	// noise 0-1 or -1-1
@@ -37,6 +37,11 @@ Terrain.Variables = {	// variables that are networked
 	material_1 = "gm_construct/grass1",	// terrain main material
 	material_2 = "nature/rockfloor005a", // terrain secondary, rock material
 	material_3 = "procedural_terrain/water/water_warp", // water material
+
+	water_kill = false,
+	water_ignite = false,
+	water_viscosity = 1,
+	water_buoyancy = 1,
 }
 
 local invMagicNumber = 1 / 2048
@@ -146,9 +151,9 @@ local function generateLightmap(res, heightFunction)
 	local done = 0
 	local sizex = ScrW() * 0.5
 	local sizey = ScrH() * 0.02
-	hook.Add("HUDPaint", "terrain_lightload", function()
+	hook.Add("HUDPaint", "terrain_load", function()
 		surface.SetDrawColor(Color(0, 0, 0, 255))
-		surface.DrawRect(sizex - 110, sizey, 220, 20)
+        surface.DrawRect(sizex - 200, sizey - 12.5, 400, 50)
 		draw.DrawText("Baking lighting.. " .. math.Round(done / res * 100) .. "% done", "TargetID", sizex, sizey, color_white, TEXT_ALIGN_CENTER)
 	end)
 
@@ -207,7 +212,7 @@ local function generateLightmap(res, heightFunction)
 		render.PopRenderTarget()
 		coroutine.yield()
 	end
-	hook.Remove("HUDPaint", "terrain_lightload")
+	hook.Remove("HUDPaint", "terrain_load")
 end
 
 function Terrain.GenerateLightmap(res, heightFunction)

@@ -2,7 +2,7 @@ AddCSLuaFile()
 
 if game.GetMap() != "gm_flatgrass" then return end
 
-local terrain_speed = 0.2
+local terrain_speed = 0.1
 if SERVER then 
     util.AddNetworkString("TERRAIN_SEND_DATA")  // superadmin only!
     Terrain = Terrain or {}
@@ -63,11 +63,29 @@ else
     Terrain = Terrain or {}
     Terrain.ClientLoaded = false
 
+    local done = 0
+    local sizex = ScrW() * 0.5
+    local sizey = ScrH() * 0.02
+    local function loadhud()
+        surface.SetDrawColor(Color(0, 0, 0, 255))
+        surface.DrawRect(sizex - 200, sizey - 12.5, 400, 50)
+        draw.DrawText("Generating Server Chunks.. " .. math.Round(done * 100) .. "% done", "TargetID", sizex, sizey, color_white, TEXT_ALIGN_CENTER)
+    end
+
     // clients can randomly forget chunk data during a lagspike, we rebuild it if that happens
     local co = coroutine.create(function()
         while true do 
+            coroutine.wait(1)
             if Terrain.ClientLoaded then
-                for k, v in ipairs(ents.FindByClass("terrain_chunk")) do
+                local chunks = ents.FindByClass("terrain_chunk")
+                if #chunks < (Terrain.Resolution * 2)^2 then 
+                    hook.Add("HUDPaint", "terrain_load", loadhud)
+                    done = #chunks / (Terrain.Resolution * 2)^2
+                    continue
+                else
+                    done = 1
+                end
+                for k, v in ipairs(chunks) do
                     if v:IsValid() then
                         if jit.arch != "x86" then
                             if (!v:GetPhysicsObject() or !v:GetPhysicsObject():IsValid()) then
@@ -83,10 +101,9 @@ else
                             end
                         end
                     end
-                    coroutine.yield(terrain_speed)
+                    coroutine.wait(terrain_speed)
                 end
             end
-            coroutine.wait(5)
         end
     end)
 

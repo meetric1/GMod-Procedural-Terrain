@@ -412,7 +412,6 @@ function ENT:BuildCollision(heightFunction)
     end
 end
 
-
 function ENT:Initialize()
     if CLIENT then return end
 
@@ -437,7 +436,7 @@ function ENT:ClientInitialize()
     self:BuildCollision()
     if self:GetPhysicsObject():IsValid() then
         self:GetPhysicsObject():EnableMotion(false)
-        self:GetPhysicsObject():SetMass(50000)  // make sure to call these on client or else when your ragdoll dies you crash!
+        self:GetPhysicsObject():SetMass(50000)  // make sure to call these on client or else when you touch it, you will crash
         self:GetPhysicsObject():SetPos(self:GetPos())
     end
     self:GenerateMesh()
@@ -501,19 +500,20 @@ local math_Distance = math.Distance
 
 // this MUST be optimized as much as possible, it is called multiple times every frame
 function ENT:GetRenderMesh()
-    //print(Terrain.ClientLoaded)
+    local self = self
+
     if !self.TreeMatrices then return end
     // set a lightmap texture to be used instead of the default one
     render_SetLightmapTexture(lm)
-    local selfpos = (self:GetPos() + self:OBBCenter())
-    local eyepos = EyePos()
 
     // get local vars
-    local lod = math_DistanceSqr(selfpos[1], selfpos[2], eyepos[1], eyepos[2]) < Terrain.LODDistance
+    local lod = self.LOD
     local models = self.TreeModels
     local lighting = self.TreeShading
     local color = self.TreeColors
+    local matrices = self.TreeMatrices
     local materials = Terrain.TreeMaterials
+    
     local flashlightOn = LocalPlayer():FlashlightIsOn()
 
     // reset lighting
@@ -524,27 +524,22 @@ function ENT:GetRenderMesh()
 
     // render foliage
     if lod then // chunk is near us, render high quality foliage
-        // render grasses if chunks are near
-        if self.GrassMesh and self.GrassMesh:IsValid() then 
-            render_SetMaterial(detailMaterial)
-            self.GrassMesh:Draw()
-        end
-
         local lastlight
         local lastmat
-        for k, matrix in ipairs(self.TreeMatrices) do
-            local modelID = models[k]
+        for i = 1, #matrices do
+            local matrix = matrices[i]
+            local modelID = models[i]
             if lastmat != modelID then
-                if k == 1 or lastmat == 5 or modelID == 5 then
+                if i == 1 or lastmat == 5 or modelID == 5 then
                     render_SetMaterial(materials[modelID])
                 end
                 lastmat = modelID
             end
 
             // give the tree its shading
-            local tree_color = color[k]
+            local tree_color = color[i]
             if tree_color != lastlight then
-                local light = lighting[k]
+                local light = lighting[i]
                 local light_2 = light * 0.45
                 render_SetModelLighting(0, light_2, light_2, light_2)
                 render_SetModelLighting(2, light, light, light)
@@ -565,19 +560,20 @@ function ENT:GetRenderMesh()
     else // chunk is far, render low definition
         local lastlight
         local lastmat
-        for k, matrix in ipairs(self.TreeMatrices) do
-            local modelID = models[k]
+        for i = 1, #matrices do
+            local matrix = matrices[i]
+            local modelID = models[i]
             if lastmat != modelID then
-                if k == 1 or lastmat == 5 or modelID == 5 then
+                if i == 1 or lastmat == 5 or modelID == 5 then
                     render_SetMaterial(materials[modelID])
                 end
                 lastmat = modelID
             end
 
             // give the tree its shading
-            local tree_color = color[k]
+            local tree_color = color[i]
             if tree_color != lastlight then
-                local light = lighting[k]
+                local light = lighting[i]
                 local light_2 = light * 0.45
                 render_SetModelLighting(0, light_2, light_2, light_2)
                 render_SetModelLighting(2, light, light, light)
@@ -597,3 +593,14 @@ function ENT:GetRenderMesh()
     return renderTable
 end
 
+function ENT:Draw()
+    local self = self
+    local selfpos = (self:GetPos() + self:OBBCenter())
+    local eyepos = EyePos()
+    self.LOD = math_DistanceSqr(selfpos[1], selfpos[2], eyepos[1], eyepos[2]) < Terrain.LODDistance
+    self:DrawModel()
+    if self.LOD and IsValid(self.GrassMesh) then 
+        render_SetMaterial(detailMaterial)
+        self.GrassMesh:Draw()
+    end
+end
