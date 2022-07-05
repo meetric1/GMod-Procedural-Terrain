@@ -2,6 +2,7 @@ AddCSLuaFile()
 
 if game.GetMap() != "gm_flatgrass" then return end
 
+local terrain_speed = 0.2
 if SERVER then 
     util.AddNetworkString("TERRAIN_SEND_DATA")  // superadmin only!
     Terrain = Terrain or {}
@@ -16,7 +17,7 @@ if SERVER then
                 chunk:Spawn()
                 table.insert(Terrain.Chunks, chunk)
     
-                coroutine.wait(0.1)
+                coroutine.wait(terrain_speed)
             end
         end
     end
@@ -67,15 +68,25 @@ else
         while true do 
             if Terrain.ClientLoaded then
                 for k, v in ipairs(ents.FindByClass("terrain_chunk")) do
-                    if v:IsValid() and (!v:GetPhysicsObject() or !v:GetPhysicsObject():IsValid()) then
-                        print("Rebuilding Physics for Chunk " .. v:GetChunkX() .. "," .. v:GetChunkY())
-                        v:OnRemove()
-                        v:Initialize()
+                    if v:IsValid() then
+                        if jit.arch != "x86" then
+                            if (!v:GetPhysicsObject() or !v:GetPhysicsObject():IsValid()) then
+                                print("Rebuilding Physics for Chunk " .. v:GetChunkX() .. "," .. v:GetChunkY())
+                                v:OnRemove()
+                                v:ClientInitialize()
+                            end
+                        else
+                            if !v.TreeMatrices then
+                                print("Rebuilding Physics for Chunk " .. v:GetChunkX() .. "," .. v:GetChunkY())
+                                v:OnRemove()
+                                v:ClientInitialize()
+                            end
+                        end
                     end
-                    coroutine.yield()
+                    coroutine.yield(terrain_speed)
                 end
             end
-            coroutine.wait(10)
+            coroutine.wait(5)
         end
     end)
 
@@ -92,15 +103,24 @@ else
         Terrain.Material:SetTexture("$basetexture2", t.material_1)
         Terrain.WaterMaterial = Material(t.material_3)
 
-        if !Terrain.ClientLoaded then
+        //if !Terrain.ClientLoaded then
             Terrain.ClientLoaded = true
-            for k, v in ipairs(ents.FindByClass("terrain_chunk")) do
-                if v.Initialize then
-                    v:Initialize()
-                end
-            end
-            Terrain.GenerateLightmap(1024)
-        end
+            //local has_end = false
+            //for k, v in ipairs(ents.FindByClass("terrain_chunk")) do
+            //    if v.Initialize then
+            //        v:Initialize()
+            //        if v.GetChunkX and v:GetChunkX() == -Terrain.Resolution and v:GetChunkY() == -Terrain.Resolution then
+            //            has_end = true
+            //        end
+            //    end
+            //end
+
+            //if has_end then
+                //timer.Simple(10, function()
+                //    Terrain.GenerateLightmap(1024)
+                //end)
+            //end
+        //end
     end)
 
     // clients request to server to get data for height function

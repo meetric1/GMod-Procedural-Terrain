@@ -2,13 +2,67 @@ if game.GetMap() != "gm_flatgrass" then return end
 
 local gravity_convar = GetConVar("sv_gravity")
 
-local maintrace_hit
+// stolen tri intersection function lol
+local function intersectRayWithTriangle(rayOrigin, rayDir, tri1, tri2, tri3)
+    local point1 = tri1
+    local edge1 = tri2 - point1
+    local edge2 = tri3 - point1
+    local h = rayDir:Cross(edge2)
+    local a = edge1:Dot(h)
+    if a > 0 then
+        return nil     // This ray is parallel to this triangle.
+    end
+    
+    local f = 1 / a
+    local s = rayOrigin - point1
+    local u = f * s:Dot(h)
+
+    if u < 0 || u > 1 then
+        return nil
+    end
+    
+    local q = s:Cross(edge1)
+    local v = f * rayDir:Dot(q)
+    if v < 0 || u + v > 1 then
+        return nil
+    end
+    
+    // At this stage we can compute t to find out where the intersection point is on the line.
+    local t = f * edge2:Dot(q)
+    if (t > 0) then // ray intersection
+        return rayOrigin + rayDir * t;
+    end
+    
+    return nil
+end
+    
 local trace_filter = function(e) return e:GetClass() == "terrain_chunk" end
+local function getHeight(x, y)
+    return Vector(x, y, Terrain.MathFunc(x, y) + Terrain.ZOffset)
+end
+
+local function intersectTerrain(pos)
+    local worldx = pos[1]
+    local worldy = pos[2]
+    local math = math
+    local lerpXBottom = math.floor(worldx / Terrain.ChunkSize - 0.001) * Terrain.ChunkSize
+    local lerpYBottom = math.floor(worldy / Terrain.ChunkSize - 0.001) * Terrain.ChunkSize
+    local lerpXTop	  = math.ceil(worldx / Terrain.ChunkSize) * Terrain.ChunkSize
+    local lerpYTop	  = math.ceil(worldy / Terrain.ChunkSize) * Terrain.ChunkSize
+
+    // find where to cast the shadow ray
+    local v = Vector(worldx, worldy, 25601)
+    local shadowPos = intersectRayWithTriangle(v, Vector(0, 0, -1), getHeight(lerpXTop, lerpYBottom), getHeight(lerpXBottom, lerpYBottom), getHeight(lerpXBottom, lerpYTop))	// 25601 = max height
+    shadowPos = shadowPos or intersectRayWithTriangle(v, Vector(0, 0, -1), getHeight(lerpXTop, lerpYTop), getHeight(lerpXTop, lerpYBottom), getHeight(lerpXBottom, lerpYTop))
+    
+    return shadowPos[3] > pos[3]
+end
+
 local function inWater(pos)
     local waterHeight = Terrain.Variables.waterHeight
     if !waterHeight then return false end
 
-    if maintrace_hit then return false end
+    if intersectTerrain(pos) then return end
     return pos[3] < waterHeight
 end
 
@@ -40,12 +94,6 @@ end)
 
 // main movement
 hook.Add("Move", "Terrain_Swimming", function(ply, move)
-    maintrace_hit = !util.TraceLine({
-        start = ply:GetPos(),
-        endpos = ply:GetPos() - Vector(0, 0, 99999),
-        filter = trace_filter,
-        ignoreworld = true
-    }).Hit
     if !inWater(ply:GetPos()) then return end
     if Terrain.Variables.waterKill then ply:Kill() return end
 
@@ -88,17 +136,6 @@ end)
 
 // serverside stuff now
 if CLIENT then
-    if game.SinglePlayer() then
-        hook.Add("Think", "terrain_water_trace", function()
-            maintrace_hit = !util.TraceLine({
-                start = EyePos(),
-                endpos = EyePos() - Vector(0, 0, 99999),
-                filter = trace_filter,
-                ignoreworld = true
-            }).Hit
-        end)
-    end
-        
     Terrain.WaterMaterial = Material("procedural_terrain/water/water_warp")
     local waterMatrix = Matrix()
     waterMatrix:SetScale(Vector(Terrain.ChunkResScale * Terrain.Resolution, Terrain.ChunkResScale * Terrain.Resolution))
@@ -124,7 +161,7 @@ if CLIENT then
     })
 
     hook.Add("PreDrawTranslucentRenderables", "Terrain_Water", function(_, sky)
-        if sky or maintrace_hit then return end
+        if sky or intersectTerrain(EyePos()) then return end
         local waterHeight = Terrain.Variables.temp_waterHeight or Terrain.Variables.waterHeight
         if waterHeight then
             waterMatrix:SetTranslation(Vector(0, 0, waterHeight))

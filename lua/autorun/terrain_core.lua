@@ -2,6 +2,8 @@ AddCSLuaFile()
 
 if game.GetMap() != "gm_flatgrass" then return end
 
+if SERVER then resource.AddWorkshop("2830138108") end
+
 Terrain = Terrain or {}
 Terrain.ChunkSize = 256
 Terrain.Resolution = 3
@@ -198,6 +200,7 @@ local function generateLightmap(res, heightFunction)
 					end
 
 					shadowAmount = shadowAmount - math.Clamp( (- getHeight(worldx,worldy).z + waterHeight) * 0.2, 0, 48 )
+					if render.GetHDREnabled() then shadowAmount = shadowAmount * 0.2 end	// quick fix for HDR, not sure why it brightens the scene by 75%
 
 					surface_SetDrawColor(shadowAmount, shadowAmount, shadowAmount, 255)
 					surface_DrawRect(x * lightmapMultiplier, y * lightmapMultiplier, lightmapMultiplier, lightmapMultiplier)

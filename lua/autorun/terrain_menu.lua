@@ -24,6 +24,10 @@ concommand.Add("terrain_menu", function()
                 v:GenerateTrees()
                 v:SetRenderBounds(v:OBBMins(), v:OBBMaxs() + Vector(0, 0, 1000))
             end
+
+            Terrain.Material:SetTexture("$basetexture", Terrain.Variables.material_2)
+            Terrain.Material:SetTexture("$basetexture2", Terrain.Variables.material_1)
+            Terrain.WaterMaterial = Material(Terrain.Variables.material_3)
         end
         Terrain.Variables.temp_waterHeight = nil
     end
@@ -471,6 +475,10 @@ concommand.Add("terrain_menu", function()
             v:GenerateTrees(newFunction, options)
             v:SetRenderBounds(v:OBBMins() * Vector(1, 1, -1), v:OBBMaxs() + Vector(0, 0, 1000))
         end
+
+        Terrain.Material:SetTexture("$basetexture", options.material_2)
+        Terrain.Material:SetTexture("$basetexture2", options.material_1)
+        Terrain.WaterMaterial = Material(options.material_3)
 
         changedTerrain = true
     end
