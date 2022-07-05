@@ -169,7 +169,7 @@ local function generateLightmap(res, heightFunction)
 					local dotShading = triNorm:Dot(Terrain.SunDir)	// smooth shading
 					//local dotShading = (tri1[2] - tri1[1]):Cross(tri1[2] - tri1[3]):GetNormalized():Dot(sunDir)	// flat shading (disabled)
 
-					local shadowAmount = (dotShading + 1.5) * 64
+					local shadowAmount = math.Clamp(dotShading + 0.5, 0, 1)*128
 					if dotShading > 0 then	// if it faces toward the sun
 						// we have mathmatical terrain, however it is not perfectly smooth
 						// the shadow ray may intersect with its own triangle, which is not what we want
@@ -190,10 +190,10 @@ local function generateLightmap(res, heightFunction)
 						shadowPos = shadowPos or intersectRayWithTriangle(v, Vector(0, 0, -1), getHeight(lerpXTop, lerpYTop), getHeight(lerpXTop, lerpYBottom), getHeight(lerpXBottom, lerpYTop))
 						shadowPos = (shadowPos or Vector(0, 0, 0)) + Vector(0, 0, 1)// + triNorm * 10
 						if !util_TraceLine({start = shadowPos, endpos = shadowPos + Terrain.SunDir * 99999, filter = traceFunc}).HitSky then	// if it hits rock
-							shadowAmount = 50
+							shadowAmount = 64
 						end
 					else	// sunlight does not hit it because it is angled away from the sun
-						shadowAmount = 50
+						shadowAmount = 64
 					end
 
 					surface_SetDrawColor(shadowAmount, shadowAmount, shadowAmount, 255)
