@@ -150,9 +150,9 @@ local function generateLightmap(res, heightFunction)
 	local done = 0
 	local sizex = ScrW() * 0.5
 	local sizey = ScrH() * 0.02
-	hook.Add("HUDPaint", "terrain_lightload", function()
+	hook.Add("HUDPaint", "terrain_load", function()
 		surface.SetDrawColor(Color(0, 0, 0, 255))
-		surface.DrawRect(sizex - 110, sizey, 220, 20)
+		surface.DrawRect(sizex - 200, sizey - 12.5, 400, 50)
 		draw.DrawText("Baking lighting.. " .. math.Round(done / res * 100) .. "% done", "TargetID", sizex, sizey, color_white, TEXT_ALIGN_CENTER)
 	end)
 
@@ -219,7 +219,7 @@ local function generateLightmap(res, heightFunction)
 		render.PopRenderTarget()
 		coroutine.yield()
 	end
-	hook.Remove("HUDPaint", "terrain_lightload")
+	hook.Remove("HUDPaint", "terrain_load")
 end
 
 function Terrain.GenerateLightmap(res, heightFunction)
