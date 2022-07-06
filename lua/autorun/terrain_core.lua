@@ -140,8 +140,12 @@ local function generateLightmap(res, heightFunction)
 	local surface_SetDrawColor = surface.SetDrawColor	// faster lookup
 	local surface_DrawRect = surface.DrawRect
 	local globalTerrainScale = Terrain.ChunkResScale * Terrain.Resolution
+	local waterHeight = Terrain.Variables.waterHeight
 	local util_TraceLine = util.TraceLine
 	local lightmapMultiplier = Terrain.LightmapRes / res
+	local math_floor = math.floor
+	local math_ceil = math.ceil
+	local math_Clamp = math.Clamp
 	local function getHeight(x, y)
 		return Vector(x, y, heightFunction(x, y) + Terrain.ZOffset)
 	end
@@ -153,7 +157,7 @@ local function generateLightmap(res, heightFunction)
 	local sizey = ScrH() * 0.02
 	hook.Add("HUDPaint", "terrain_load", function()
 		surface.SetDrawColor(Color(0, 0, 0, 255))
-        surface.DrawRect(sizex - 200, sizey - 12.5, 400, 50)
+		surface.DrawRect(sizex - 200, sizey - 12.5, 400, 50)
 		draw.DrawText("Baking lighting.. " .. math.Round(done / res * 100) .. "% done", "TargetID", sizex, sizey, color_white, TEXT_ALIGN_CENTER)
 	end)
 
@@ -176,7 +180,23 @@ local function generateLightmap(res, heightFunction)
 					local dotShading = triNorm:Dot(Terrain.SunDir)	// smooth shading
 					//local dotShading = (tri1[2] - tri1[1]):Cross(tri1[2] - tri1[3]):GetNormalized():Dot(sunDir)	// flat shading (disabled)
 
-					local shadowAmount = (dotShading + 1.5) * 64
+					local math = math
+					local lerpXBottom = math_floor(worldx / Terrain.ChunkSize - 0.001) * Terrain.ChunkSize
+					local lerpYBottom = math_floor(worldy / Terrain.ChunkSize - 0.001) * Terrain.ChunkSize
+					local lerpXTop	  = math_ceil(worldx / Terrain.ChunkSize) * Terrain.ChunkSize
+					local lerpYTop	  = math_ceil(worldy / Terrain.ChunkSize) * Terrain.ChunkSize
+
+					local corner1 = getHeight(lerpXTop, lerpYTop)
+					local corner2 = getHeight(lerpXTop, lerpYBottom)
+					local corner3 = getHeight(lerpXBottom, lerpYBottom)
+					local corner4 = getHeight(lerpXBottom, lerpYTop)
+
+					local v = Vector(worldx, worldy, 25601)
+					local shadowPos = intersectRayWithTriangle(v, Vector(0, 0, -1), corner2, corner3, corner4)	// 25601 = max height
+					shadowPos = shadowPos or intersectRayWithTriangle(v, Vector(0, 0, -1), corner1, corner2, corner4)
+					shadowPos = (shadowPos or Vector(0, 0, 0)) + Vector(0, 0, 1)// + triNorm * 10
+
+					local shadowAmount = math_Clamp(dotShading + 0.5, 0, 1)*128
 					if dotShading > 0 then	// if it faces toward the sun
 						// we have mathmatical terrain, however it is not perfectly smooth
 						// the shadow ray may intersect with its own triangle, which is not what we want
@@ -185,27 +205,19 @@ local function generateLightmap(res, heightFunction)
 						// (we subtract 0.001 incase lerpxbottom and lerpxtop end up to be the same)
 
 						// find rounded point heights
-						local math = math
-						local lerpXBottom = math.floor(worldx / Terrain.ChunkSize - 0.001) * Terrain.ChunkSize
-						local lerpYBottom = math.floor(worldy / Terrain.ChunkSize - 0.001) * Terrain.ChunkSize
-						local lerpXTop	  = math.ceil(worldx / Terrain.ChunkSize) * Terrain.ChunkSize
-						local lerpYTop	  = math.ceil(worldy / Terrain.ChunkSize) * Terrain.ChunkSize
 
 						// find where to cast the shadow ray
-						local v = Vector(worldx, worldy, 25601)
-						local shadowPos = intersectRayWithTriangle(v, Vector(0, 0, -1), getHeight(lerpXTop, lerpYBottom), getHeight(lerpXBottom, lerpYBottom), getHeight(lerpXBottom, lerpYTop))	// 25601 = max height
-						shadowPos = shadowPos or intersectRayWithTriangle(v, Vector(0, 0, -1), getHeight(lerpXTop, lerpYTop), getHeight(lerpXTop, lerpYBottom), getHeight(lerpXBottom, lerpYTop))
-						shadowPos = (shadowPos or Vector(0, 0, 0)) + Vector(0, 0, 1)// + triNorm * 10
 						if !util_TraceLine({start = shadowPos, endpos = shadowPos + Terrain.SunDir * 99999, filter = traceFunc}).HitSky then	// if it hits rock
-							shadowAmount = 50
+							shadowAmount = 64
 						end
 					else	// sunlight does not hit it because it is angled away from the sun
-						shadowAmount = 50
+						shadowAmount = 64
 					end
 
+					local waterAmount = math_Clamp( (-shadowPos.z + waterHeight) * 0.2, 0, 48 )
 					if render.GetHDREnabled() then shadowAmount = shadowAmount * 0.2 end	// quick fix for HDR, not sure why it brightens the scene by 75%
 
-					surface_SetDrawColor(shadowAmount, shadowAmount, shadowAmount, 255)
+					surface_SetDrawColor(shadowAmount - waterAmount*0.9, shadowAmount - waterAmount*0.7, shadowAmount - waterAmount*0.3, 255)
 					surface_DrawRect(x * lightmapMultiplier, y * lightmapMultiplier, lightmapMultiplier, lightmapMultiplier)
 				end
 			cam.End2D()
