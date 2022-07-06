@@ -1,10 +1,10 @@
-#Welcome to my procedural terrain addon [![made with - mee++](https://img.shields.io/badge/made_with-mee%2B%2B-2ea44f)](https://)  
+# Welcome to my procedural terrain addon [![made with - mee++](https://img.shields.io/badge/made_with-mee%2B%2B-2ea44f)](https://)  
 
 So this is a project ive been working on for about 5 months now, I am pretty proud of its release however it will likely not be 100% perfect, please report any bugs you find.
 
 If you are experiencing crashing, before reporting it, please try and switch to the 64x branch of gmod as it is more stable. Source physics isn't exactly happy when generating map wide objects, this addon is quite literally pushing source to its limits.
 
-##H#ow to use:
+### How to use:
 - Go to gm_flatgrass, this mod replaces it with the custom terrain!
 - Access the custom menu by typing terrain_menu in console, or by going into the utilities tab and clicking the button.
 - You must be superadmin to use the menu!
@@ -12,7 +12,7 @@ If you are experiencing crashing, before reporting it, please try and switch to 
 - The "submit button" actually changes the terrain, this is important, do not mix it up with the "test changes" button, which just alters the visual for your viewing.
 - As of now you cannot save your changes for later use, I will hopefully implement a save / load feature in the future.
 
-###Custom materials that can be used with blendmap:
+### Custom materials that can be used with blendmap:
 - gm_construct/construct_sand
 - ground/snow01 (may need ep2, not sure)
 - hunter/myplastic
@@ -20,7 +20,7 @@ If you are experiencing crashing, before reporting it, please try and switch to 
 - most materials from material tool
 - most .vmt files on your client
 
-###Features
+### Features
 - Better performance than other displacement forest maps such as gm_fork
 - Imported models, no dependeces required!
 - All chunk, blending, foliage, and tree shading complete in under 10 seconds (with my specs)
@@ -35,7 +35,7 @@ If you are experiencing crashing, before reporting it, please try and switch to 
 - Lots of options in the menu including a optional user-created LUA heightmap function
 - Mutliplayer Support
 
-###Bugs I am aware of:
+### Bugs I am aware of:
 - Tree and Rock collision can be wonky with high ping
 - Having a weak computer and being on the 32 bit branch of gmod may cause crashes, easiest solution is to switch to 64 bit if you haven't already
 edit: I implemented a possible working quickfix for this issue by simply not generating client physics if you're on 32 bit. (but either way, please switch to 64 bit)
