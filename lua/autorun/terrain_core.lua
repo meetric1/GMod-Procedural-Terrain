@@ -214,11 +214,16 @@ local function generateLightmap(res, heightFunction)
 						shadowAmount = 50
 					end
 
-					local waterAmount = math_Clamp( (-shadowPos.z + waterHeight) * 0.2, 0, 50 )
-					if render.GetHDREnabled() then shadowAmount = shadowAmount * 0.2 end	// quick fix for HDR, not sure why it brightens the scene by 75%
+					if render.GetHDREnabled() then shadowAmount = shadowAmount * 0.2 end	// quick fix for HDR, not sure why it brightens the scene by 80%
 
-					surface_SetDrawColor(shadowAmount - waterAmount * 0.5, shadowAmount - waterAmount*0.3, shadowAmount - waterAmount*0.1, 255)
-					surface_DrawRect(x * lightmapMultiplier, y * lightmapMultiplier, lightmapMultiplier, lightmapMultiplier)
+					if waterHeight then
+						local waterAmount = math_Clamp( (-shadowPos.z + waterHeight) * 0.2, 0, 50 )
+						surface_SetDrawColor(shadowAmount - waterAmount * 0.5, shadowAmount - waterAmount*0.3, shadowAmount - waterAmount*0.1, 255)
+						surface_DrawRect(x * lightmapMultiplier, y * lightmapMultiplier, lightmapMultiplier, lightmapMultiplier)
+					else
+						surface_SetDrawColor(shadowAmount, shadowAmount, shadowAmount, 255)
+						surface_DrawRect(x * lightmapMultiplier, y * lightmapMultiplier, lightmapMultiplier, lightmapMultiplier)
+					end
 				end
 			cam.End2D()
 		render.PopRenderTarget()

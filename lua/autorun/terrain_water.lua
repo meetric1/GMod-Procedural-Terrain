@@ -232,6 +232,7 @@ if SERVER then
     }
     hook.Add("Think", "terrain_buoyancy", function()
         local waterHeight = Terrain.Variables.waterHeight // add 5 so the objects dont stay all the way under water
+        if !waterHeight then return end
         local entities = ents.FindByClass("prop_*")
         for _, prop in ipairs(entities) do
             local phys = prop:GetPhysicsObject()

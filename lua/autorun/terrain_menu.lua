@@ -268,6 +268,7 @@ concommand.Add("terrain_menu", function()
         local scrollPanel = vgui.Create("DScrollPanel", tabs)
         local scrollEditTab = tabs:AddSheet("Water", scrollPanel, "icon16/water.png").Tab
 
+        local waterHeight
         local waterEnabled = scrollPanel:meeCheckbox("Enable Water?", "waterHeight", TOP)
         function waterEnabled:OnChange(val)
             if val then 
@@ -279,7 +280,7 @@ concommand.Add("terrain_menu", function()
             end
         end
 
-        local waterHeight = scrollPanel:meeSlider("Water Height", -12765, 12765, "waterHeight", 0, TOP)
+        waterHeight = scrollPanel:meeSlider("Water Height", -12765, 12765, "waterHeight", 0, TOP)
         function waterHeight:OnValueChanged(val) -- special
             options.waterHeight = val
             Terrain.Variables.temp_waterHeight = val
@@ -327,33 +328,51 @@ concommand.Add("terrain_menu", function()
             options.water_ignite = val
         end
 
-        //Panel:meeSlider(text, min, max, option, decimals, dock)
-
         scrollPanel:meeSlider("Water Viscocity", -10, 10, "water_viscosity", 2, TOP)
-        //local water_viscosity = vgui.Create("DNumSlider", scrollPanel)
-        //water_viscosity:SetPos(0, 150)
-        //water_viscosity:SetSize(410, 15)
-        //water_viscosity:SetText("Water Viscocity")
-        //water_viscosity:SetMinMax(-10, 10)
-        //water_viscosity:SetValue(options.water_viscosity)
-        //water_viscosity:SetDecimals(2)
-        //water_viscosity:SetDark(true)
-        //function water_viscosity:OnValueChanged(val)
-        //    options.water_viscosity = val
-        //end
-
         scrollPanel:meeSlider("Buoyancy Multiplier", -100, 100, "water_buoyancy", 2, TOP)
-        //local water_buoyancy = vgui.Create("DNumSlider", scrollPanel)
-        //water_buoyancy:SetPos(0, 175)
-        //water_buoyancy:SetSize(410, 15)
-        //water_buoyancy:SetText("Buoyancy Multiplier")
-        //water_buoyancy:SetMinMax(-100, 100)
-        //water_buoyancy:SetValue(options.water_buoyancy)
-        //water_buoyancy:SetDecimals(2)
-        //water_buoyancy:SetDark(true)
-        //function water_buoyancy:OnValueChanged(val)
-        //    options.water_buoyancy = val
-        //end
+    end
+
+    // saving & loading done here
+    local function saveTab(tabs)
+        local scrollPanel = vgui.Create("DScrollPanel", tabs)
+        local scrollEditTab = tabs:AddSheet("Save / Load", scrollPanel, "icon16/disk.png").Tab
+
+        local saveButton = vgui.Create("DButton", scrollPanel)
+        saveButton:SetPos(250, 10)
+        saveButton:SetSize(150, 20)
+        saveButton:SetText("Save Current Preset")
+        function saveButton:DoClick()
+            
+        end
+
+        local deleteButton = vgui.Create("DButton", scrollPanel)
+        deleteButton:SetPos(250, 40)
+        deleteButton:SetSize(150, 20)
+        deleteButton:SetText("Delete Selected Preset")
+        function deleteButton:DoClick()
+            local ok = vgui.Create("DFrame")
+            ok:SetTitle("Are you sure?")
+            ok:SetSize(200, 100)
+            ok:Center()
+            ok:MakePopup()
+            ok:SetBackgroundBlur(true)
+
+            local button = vgui.Create("DButton", ok)
+            button:SetPos(10, 50)
+            button:SetSize(70, 30)
+            button:SetText("Yes")
+            function button:DoClick()
+                ok:Close()
+            end
+
+            local button = vgui.Create("DButton", ok)
+            button:SetPos(120, 50)
+            button:SetSize(70, 30)
+            button:SetText("No")
+            function button:DoClick()
+                ok:Close()
+            end
+        end
     end
 
     // minimap ortho view
@@ -407,6 +426,7 @@ concommand.Add("terrain_menu", function()
     functionTab(tabs)
     treeTab(tabs)
     waterTab(tabs)
+    saveTab(tabs)
 
     // test & submit changes button
     if LocalPlayer():IsSuperAdmin() then 
