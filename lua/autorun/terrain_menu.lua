@@ -32,6 +32,70 @@ concommand.Add("terrain_menu", function()
         Terrain.Variables.temp_waterHeight = nil
     end
 
+    -- some helper functions to make our life easier, I hope
+    local Panel = FindMetaTable("Panel")
+    function Panel:meeSlider(text, min, max, option, decimals, dock) -- NOTE! 'option' is a string!
+        local slider = vgui.Create("DNumSlider", self)
+        slider:Dock(dock)
+        slider:DockMargin(0, 5, 0, 5)
+        slider:SetSize(410, 15)
+        slider:SetText(text)
+        slider:SetMinMax(min, max)
+        slider:SetValue(options[option])
+        slider:SetDecimals(decimals)
+        slider:SetDark(true)
+        if decimals ~= 0 then
+            function slider:OnValueChanged(val)
+                options[option] = val
+            end
+        else
+            function slider:OnValueChanged(val)
+                options[option] = math.Round(val) -- enforce integers
+            end
+        end
+        return slider
+    end
+
+    function Panel:meeCheckbox(text, option, dock) -- NOTE! 'option' is a string!
+        local checkbox = vgui.Create("DCheckBoxLabel", self)
+        checkbox:Dock(dock)
+        checkbox:DockMargin(0, 5, 0, 0)
+        checkbox:SetSize(16, 16)
+        checkbox:SetText(text)
+        checkbox:SetValue(options[option])
+        checkbox:SetTextColor(Color(0, 0, 0))
+        function checkbox:OnChange(val)
+            options[option] = val
+        end
+        return checkbox
+    end
+
+    function Panel:meeColorMixer(text, option, scale, dock)
+        local mixer = vgui.Create("DColorMixer", self)
+        mixer:DockMargin(0, 5, 0, 0)
+        mixer:Dock(dock)
+        mixer:SetSize(410, 150)	
+        mixer:SetPalette(true)  	
+        mixer:SetLabel(text)
+        mixer:SetAlphaBar(false)
+        mixer:SetWangs(true)
+        mixer:SetVector(options[option] / scale) 	-- Set the default color
+        local factor = scale / 255
+        function mixer:ValueChanged(col)
+            options[option] = Vector(col.r * factor, col.g * factor, col.b * factor)
+        end
+        return mixer
+    end
+
+    function Panel:fastDiv(x, y, dock)
+        div = vgui.Create("DPanel", self)
+        div:Dock(dock)
+        div:SetSize(x, y)
+        function div:Paint() end
+        return div
+    end
+
+
     // the tabs
     local tabsFrame = vgui.Create("DPanel", mainFrame)
     tabsFrame:SetSize(425, 365)
@@ -43,99 +107,19 @@ concommand.Add("terrain_menu", function()
         local scrollPanel = vgui.Create("DScrollPanel", tabs)
         local scrollEditTab = tabs:AddSheet("Mountains", scrollPanel, "icon16/world_edit.png").Tab
 
-        // editable sliders
-        local heightSlider = vgui.Create("DNumSlider", scrollPanel)
-        heightSlider:SetPos(0, 0)
-        heightSlider:SetSize(410, 15)
-        heightSlider:SetText("Main Mountain Height")
-        heightSlider:SetMinMax(0, 200)
-        heightSlider:SetValue(options.height_1)
-        heightSlider:SetDecimals(1)
-        heightSlider:SetDark(true)
-        function heightSlider:OnValueChanged(val)
-            options.height_1 = val
-        end
-
-        local noiseScaleSlider = vgui.Create("DNumSlider", scrollPanel)
-        noiseScaleSlider:SetPos(0, 25)
-        noiseScaleSlider:SetSize(410, 15)
-        noiseScaleSlider:SetText("Main Mountain Size")
-        noiseScaleSlider:SetMinMax(1, 50)
-        noiseScaleSlider:SetValue(options.noiseScale_1)
-        noiseScaleSlider:SetDecimals(1)
-        noiseScaleSlider:SetDark(true)
-        function noiseScaleSlider:OnValueChanged(val)
-            options.noiseScale_1 = val
-        end
+        -- a div to hold our docked stuff, we gotta leave space for what's below
+        local normalOptions = scrollPanel:fastDiv(410,220,TOP)
 
         // editable sliders
-        local heightSlider = vgui.Create("DNumSlider", scrollPanel)
-        heightSlider:SetPos(0, 50)
-        heightSlider:SetSize(410, 15)
-        heightSlider:SetText("Secondary Mountain Height")
-        heightSlider:SetMinMax(0, 200)
-        heightSlider:SetValue(options.height_1)
-        heightSlider:SetDecimals(1)
-        heightSlider:SetDark(true)
-        function heightSlider:OnValueChanged(val)
-            options.height_2 = val
-        end
+        normalOptions:meeSlider("Main Mountain Height", 0, 200, "height_1", 1, TOP)
+        normalOptions:meeSlider("Main Mountain Size", 1, 50, "noiseScale_1", 1, TOP)
+        normalOptions:meeSlider("Secondary Mountain Height", 0, 200, "height_2", 1, TOP)
+        normalOptions:meeSlider("Secondary Moutain Size", 1, 50, "noiseScale_2", 1, TOP)
 
-        local noiseScaleSlider = vgui.Create("DNumSlider", scrollPanel)
-        noiseScaleSlider:SetPos(0, 75)
-        noiseScaleSlider:SetSize(410, 15)
-        noiseScaleSlider:SetText("Secondary Mountain Size")
-        noiseScaleSlider:SetMinMax(1, 50)
-        noiseScaleSlider:SetValue(options.noiseScale_2)
-        noiseScaleSlider:SetDecimals(1)
-        noiseScaleSlider:SetDark(true)
-        function noiseScaleSlider:OnValueChanged(val)
-            options.noiseScale_2 = val
-        end
-
-        local offsetSlider = vgui.Create("DNumSlider", scrollPanel)
-        offsetSlider:SetPos(0, 120)
-        offsetSlider:SetSize(410, 15)
-        offsetSlider:SetText("Terrain Z Offset")
-        offsetSlider:SetMinMax(0, 100)
-        offsetSlider:SetValue(options.offset)
-        offsetSlider:SetDecimals(1)
-        offsetSlider:SetDark(true)
-        function offsetSlider:OnValueChanged(val)
-            options.offset = val
-        end
-
-        local seedSlider = vgui.Create("DNumSlider", scrollPanel)
-        seedSlider:SetPos(0, 150)
-        seedSlider:SetSize(410, 15)
-        seedSlider:SetText("Terrain Seed")
-        seedSlider:SetMinMax(0, 2^32)
-        seedSlider:SetValue(options.seed)
-        seedSlider:SetDecimals(0)
-        seedSlider:SetDark(true)
-        function seedSlider:OnValueChanged(val)
-            options.seed = val
-        end
-
-        local clampBox = vgui.Create("DCheckBoxLabel", scrollPanel)
-        clampBox:SetPos(0, 175)
-        clampBox:SetSize(16, 16)
-        clampBox:SetText("Clamp Noise? (0 to 1 instead of -1 to 1)")
-        clampBox:SetValue(options.clampNoise)
-        clampBox:SetTextColor(Color(0, 0, 0))
-        function clampBox:OnChange(val)
-            options.clampNoise = val
-        end
-
-        local spawnBox = vgui.Create("DCheckBoxLabel", scrollPanel)
-        spawnBox:SetPos(0, 200)
-        spawnBox:SetSize(16, 16)
-        spawnBox:SetText("Leave Space for Flatgrass Building?")
-        spawnBox:SetValue(options.spawnArea)
-        spawnBox:SetTextColor(Color(0, 0, 0))
-        function spawnBox:OnChange(val)
-            options.spawnArea = val
-        end
+        normalOptions:meeCheckbox("Leave Space for Flatgrass Building?", "spawnArea", BOTTOM)
+        normalOptions:meeCheckbox("Clamp Noise? (0 to 1 instead of -1 to 1)", "clampNoise", BOTTOM)
+        normalOptions:meeSlider("Terrain Seed", 0, 2^32, "seed", 0, BOTTOM)
+        normalOptions:meeSlider("Terrain Z Offset", 0, 100, "offset", 1, BOTTOM)
 
         local material_grass = vgui.Create("DTextEntry", scrollPanel)
         material_grass:SetPos(0, 225)
@@ -168,81 +152,21 @@ concommand.Add("terrain_menu", function()
         grassText:SetText("<- (Advanced) Textures used for grass\nand rock blending, used mainly for biomes\n(Must be a .vmt texture)\n(Examples in description of addon)")
     end
 
-    // the mountain tab, contains the submit & test buttons & height modifiers
+    // the foilage tab, contains settings for trees & grass
     local function treeTab(tabs)
         local scrollPanel = vgui.Create("DScrollPanel", tabs)
         local scrollEditTab = tabs:AddSheet("Foliage", scrollPanel, "icon16/arrow_up.png").Tab
 
+        local container = scrollPanel:fastDiv(410,270,FILL) -- needed since everything here is docked
+
         // editable sliders
-        local treeHeight = vgui.Create("DNumSlider", scrollPanel)
-        treeHeight:SetPos(0, 0)
-        treeHeight:SetSize(410, 15)
-        treeHeight:SetText("Tree Size")
-        treeHeight:SetMinMax(1, 10)
-        treeHeight:SetValue(options.treeHeight)
-        treeHeight:SetDecimals(1)
-        treeHeight:SetDark(true)
-        function treeHeight:OnValueChanged(val)
-            options.treeHeight = val
-        end
+        container:meeSlider("Tree Size", 1, 10, "treeHeight", 1, TOP)
+        container:meeSlider("Tree Density (x*x per chunk)", 0, 10, "treeResolution", 0, TOP)
+        container:meeSlider("Tree Slope Threshold", 0, 1, "treeResolution", 3, TOP) -- TODO: invert this slider
 
-        local treeResolution = vgui.Create("DNumSlider", scrollPanel)
-        treeResolution:SetPos(0, 25)
-        treeResolution:SetSize(410, 15)
-        treeResolution:SetText("Tree Amount (x*x res per chunk)")
-        treeResolution:SetMinMax(0, 10)
-        treeResolution:SetValue(options.treeResolution)
-        treeResolution:SetDecimals(0)
-        treeResolution:SetDark(true)
-        function treeResolution:OnValueChanged(val)
-            options.treeResolution = math.Round(val)
-        end
-
-        local treeThreshold = vgui.Create("DNumSlider", scrollPanel)
-        treeThreshold:SetPos(0, 50)
-        treeThreshold:SetSize(410, 15)
-        treeThreshold:SetText("Tree Slope Threshold")
-        treeThreshold:SetMinMax(0, 1)
-        treeThreshold:SetValue(options.treeThreshold)
-        treeThreshold:SetDecimals(3)
-        treeThreshold:SetDark(true)
-        function treeThreshold:OnValueChanged(val)
-            options.treeThreshold = val
-        end
-
-        local treeColor = vgui.Create("DColorMixer", scrollPanel)
-        treeColor:SetPos(0, 75)
-        treeColor:SetSize(410, 150)	
-        treeColor:SetPalette(true)  	
-        treeColor:SetLabel("Tree Color")
-        treeColor:SetAlphaBar(false)
-        treeColor:SetWangs(true)
-        treeColor:SetVector(options.treeColor * 0.1) 	-- Set the default color
-        function treeColor:ValueChanged(col)
-            options.treeColor = Vector(col.r / 25.5, col.g / 25.5, col.b / 25.5)
-        end
-
-        local grassSize = vgui.Create("DNumSlider", scrollPanel)
-        grassSize:SetPos(0, 255)
-        grassSize:SetSize(410, 15)
-        grassSize:SetText("Grass Size")
-        grassSize:SetMinMax(5, 100)
-        grassSize:SetValue(options.grassSize)
-        grassSize:SetDecimals(0)
-        grassSize:SetDark(true)
-        function grassSize:OnValueChanged(val)
-            options.grassSize = val
-        end
-
-        local grassCheckbox = vgui.Create("DCheckBoxLabel", scrollPanel)
-        grassCheckbox:SetPos(0, 235)
-        grassCheckbox:SetSize(16, 16)
-        grassCheckbox:SetText("Generate Grass?")
-        grassCheckbox:SetValue(options.generateGrass)
-        grassCheckbox:SetTextColor(Color(0, 0, 0))
-        function grassCheckbox:OnChange(val)
-            options.generateGrass = val and true
-        end
+        container:meeSlider("Grass Size", 5, 100, "grassSize", 3, BOTTOM)
+        container:meeCheckbox("Generate Grass?", "generateGrass", BOTTOM)
+        container:meeColorMixer("Tree Color", "treeColor", 5, BOTTOM)
     end
 
     local function functionTab(tabs)
@@ -339,31 +263,12 @@ concommand.Add("terrain_menu", function()
         end
     end
 
+    -- the water tab, for water stuff.
     local function waterTab(tabs)
         local scrollPanel = vgui.Create("DScrollPanel", tabs)
         local scrollEditTab = tabs:AddSheet("Water", scrollPanel, "icon16/water.png").Tab
 
-        local waterEnabled
-        local waterHeight = vgui.Create("DNumSlider", scrollPanel)
-        waterHeight:SetPos(0, 25)
-        waterHeight:SetSize(410, 15)
-        waterHeight:SetText("Water Height")
-        waterHeight:SetMinMax(-12765, 12765)
-        waterHeight:SetValue(options.waterHeight or 0)
-        waterHeight:SetDecimals(0)
-        waterHeight:SetDark(true)
-        function waterHeight:OnValueChanged(val)
-            options.waterHeight = val
-            Terrain.Variables.temp_waterHeight = val
-            waterEnabled:SetValue(true)
-        end
-
-        waterEnabled = vgui.Create("DCheckBoxLabel", scrollPanel)
-        waterEnabled:SetPos(0, 0)
-        waterEnabled:SetSize(16, 16)
-        waterEnabled:SetText("Enable Water?")
-        waterEnabled:SetValue(options.waterHeight and true or false)
-        waterEnabled:SetTextColor(Color(0, 0, 0))
+        local waterEnabled = scrollPanel:meeCheckbox("Enable Water?", "waterHeight", TOP)
         function waterEnabled:OnChange(val)
             if val then 
                 options.waterHeight = waterHeight:GetValue()
@@ -373,6 +278,15 @@ concommand.Add("terrain_menu", function()
                 options.waterHeight = nil
             end
         end
+
+        local waterHeight = scrollPanel:meeSlider("Water Height", -12765, 12765, "waterHeight", 0, TOP)
+        function waterHeight:OnValueChanged(val) -- special
+            options.waterHeight = val
+            Terrain.Variables.temp_waterHeight = val
+            waterEnabled:SetValue(true)
+        end
+
+
 
         local waterText = vgui.Create("DLabel", scrollPanel)
         waterText:SetPos(0, 50)
