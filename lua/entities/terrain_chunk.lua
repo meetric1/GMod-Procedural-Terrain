@@ -420,7 +420,6 @@ function ENT:Initialize()
     self:SetSolid(SOLID_VPHYSICS)
     self:SetMoveType(MOVETYPE_NONE)
     self:EnableCustomCollisions(true)
-    self:PhysWake()
     self:GetPhysicsObject():EnableMotion(false)
     self:GetPhysicsObject():SetMass(50000)  // max weight, should help a bit with the physics solver
     self:GetPhysicsObject():SetPos(self:GetPos())
@@ -428,11 +427,6 @@ function ENT:Initialize()
 end
 
 function ENT:ClientInitialize()
-    //if !Terrain.ClientLoaded then return end
-
-    self.OffsetMatrix = Matrix()
-    self.OffsetMatrix:SetTranslation(self:GetPos())
-    self.OffsetMatrix:SetScale(Vector(1, 1, 1))
     self:BuildCollision()
     if self:GetPhysicsObject():IsValid() then
         self:GetPhysicsObject():EnableMotion(false)

@@ -89,7 +89,7 @@ end)
 // swim code yoinked from gwater, thanks again kodya
 // player animations
 hook.Add("CalcMainActivity", "Terrain_Swimming", function(ply)
-	if !inWater(ply:GetPos()) or ply:IsOnGround() then return end
+	if !inWater(ply:GetPos()) or ply:IsOnGround() or ply:InVehicle() then return end
 	return ACT_MP_SWIM, -1
 end)
 
@@ -223,6 +223,12 @@ if SERVER then
         ["wood_furniture"] = true,
         ["rubbertire"] = true,
         ["wood_solid"] = true,
+        ["plastic"] = true,
+        ["watermelon"] = true,
+        ["default"] = true,
+        ["cardboard"] = true,
+        ["paper"] = true,
+        ["popcan"] = true,
     }
     hook.Add("Think", "terrain_buoyancy", function()
         local waterHeight = Terrain.Variables.waterHeight // add 5 so the objects dont stay all the way under water
@@ -272,7 +278,7 @@ if SERVER then
                             phys:ApplyForceCenter(phys:GetMass() * phys:GetVelocity() * viscosity * -0.001)   //dampen very small bit for airboats
                         else
                             phys:ApplyForceOffset(Vector(0, 0, phys:GetMass() * (math.min(((waterHeight - world_pos[3]) * 0.1 * buoyancy), 3 * buoyancy))), world_pos)
-                            phys:ApplyForceCenter(phys:GetMass() * phys:GetVelocity() * viscosity * -0.01)   //dampen a bit
+                            phys:ApplyForceCenter(phys:GetMass() * phys:GetVelocity() * viscosity * -0.003)   //dampen a bit
                         end
                         phys:AddAngleVelocity(phys:GetAngleVelocity() * viscosity * -0.01)
                         prop_inwater = true

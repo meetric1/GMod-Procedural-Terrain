@@ -25,7 +25,7 @@ Terrain.Variables = {	// variables that are networked
 	seed = 21,		
 	treeHeight = 2,
 	treeResolution = 5,
-	treeThreshold = 0.35,
+	treeThreshold = 0.5,
 	waterHeight = -12300,
 	clampNoise = true,	// noise 0-1 or -1-1
 	customFunction = nil,	// custom function to use, nil by default (not actually added to table, only here for visualization)
@@ -196,7 +196,7 @@ local function generateLightmap(res, heightFunction)
 					shadowPos = shadowPos or intersectRayWithTriangle(v, Vector(0, 0, -1), corner1, corner2, corner4)
 					shadowPos = (shadowPos or Vector(0, 0, 0)) + Vector(0, 0, 1)// + triNorm * 10
 
-					local shadowAmount = math_Clamp(dotShading + 0.5, 0, 1)*128
+					local shadowAmount = (dotShading + 1.5) * 64
 					if dotShading > 0 then	// if it faces toward the sun
 						// we have mathmatical terrain, however it is not perfectly smooth
 						// the shadow ray may intersect with its own triangle, which is not what we want
@@ -208,16 +208,16 @@ local function generateLightmap(res, heightFunction)
 
 						// find where to cast the shadow ray
 						if !util_TraceLine({start = shadowPos, endpos = shadowPos + Terrain.SunDir * 99999, filter = traceFunc}).HitSky then	// if it hits rock
-							shadowAmount = 64
+							shadowAmount = 50
 						end
 					else	// sunlight does not hit it because it is angled away from the sun
-						shadowAmount = 64
+						shadowAmount = 50
 					end
 
-					local waterAmount = math_Clamp( (-shadowPos.z + waterHeight) * 0.2, 0, 48 )
+					local waterAmount = math_Clamp( (-shadowPos.z + waterHeight) * 0.2, 0, 50 )
 					if render.GetHDREnabled() then shadowAmount = shadowAmount * 0.2 end	// quick fix for HDR, not sure why it brightens the scene by 75%
 
-					surface_SetDrawColor(shadowAmount - waterAmount*0.9, shadowAmount - waterAmount*0.7, shadowAmount - waterAmount*0.3, 255)
+					surface_SetDrawColor(shadowAmount - waterAmount * 0.5, shadowAmount - waterAmount*0.3, shadowAmount - waterAmount*0.1, 255)
 					surface_DrawRect(x * lightmapMultiplier, y * lightmapMultiplier, lightmapMultiplier, lightmapMultiplier)
 				end
 			cam.End2D()

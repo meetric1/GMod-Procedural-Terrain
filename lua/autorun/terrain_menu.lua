@@ -162,7 +162,7 @@ concommand.Add("terrain_menu", function()
         // editable sliders
         container:meeSlider("Tree Size", 1, 10, "treeHeight", 1, TOP)
         container:meeSlider("Tree Density (x*x per chunk)", 0, 10, "treeResolution", 0, TOP)
-        container:meeSlider("Tree Slope Threshold", 0, 1, "treeResolution", 3, TOP) -- TODO: invert this slider
+        container:meeSlider("Tree Slope Threshold", 0, 1, "treeThreshold", 3, TOP) -- TODO: invert this slider
 
         container:meeSlider("Grass Size", 5, 100, "grassSize", 3, BOTTOM)
         container:meeCheckbox("Generate Grass?", "generateGrass", BOTTOM)
@@ -286,16 +286,14 @@ concommand.Add("terrain_menu", function()
             waterEnabled:SetValue(true)
         end
 
-
-
         local waterText = vgui.Create("DLabel", scrollPanel)
-        waterText:SetPos(0, 50)
+        waterText:SetPos(0, 150)
         waterText:SetSize(250, 20)
         waterText:SetColor(Color(0, 0, 0))
         waterText:SetText("Water Material (better with transparent materials)")
 
         local material_water = vgui.Create("DTextEntry", scrollPanel)
-        material_water:SetPos(0, 70)
+        material_water:SetPos(0, 170)
         material_water:SetSize(300, 20)
         material_water:SetValue(options.material_3 or "procedural_terrain/water/water_warp")
         material_water:SetPlaceholderText("procedural_terrain/water/water_warp")
@@ -307,6 +305,7 @@ concommand.Add("terrain_menu", function()
         end
 
         // instant kill water
+        //scrollPanel:meeCheckbox("Water = Instant Death", "water_kill", TOP)
         local water_var = vgui.Create("DCheckBoxLabel", scrollPanel)
         water_var:SetPos(0, 100)
         water_var:SetSize(16, 16)
@@ -328,29 +327,33 @@ concommand.Add("terrain_menu", function()
             options.water_ignite = val
         end
 
-        local water_viscosity = vgui.Create("DNumSlider", scrollPanel)
-        water_viscosity:SetPos(0, 150)
-        water_viscosity:SetSize(410, 15)
-        water_viscosity:SetText("Water Viscocity")
-        water_viscosity:SetMinMax(-10, 10)
-        water_viscosity:SetValue(options.water_viscosity)
-        water_viscosity:SetDecimals(2)
-        water_viscosity:SetDark(true)
-        function water_viscosity:OnValueChanged(val)
-            options.water_viscosity = val
-        end
+        //Panel:meeSlider(text, min, max, option, decimals, dock)
 
-        local water_buoyancy = vgui.Create("DNumSlider", scrollPanel)
-        water_buoyancy:SetPos(0, 175)
-        water_buoyancy:SetSize(410, 15)
-        water_buoyancy:SetText("Buoyancy Multiplier")
-        water_buoyancy:SetMinMax(-100, 100)
-        water_buoyancy:SetValue(options.water_buoyancy)
-        water_buoyancy:SetDecimals(2)
-        water_buoyancy:SetDark(true)
-        function water_buoyancy:OnValueChanged(val)
-            options.water_buoyancy = val
-        end
+        scrollPanel:meeSlider("Water Viscocity", -10, 10, "water_viscosity", 2, TOP)
+        //local water_viscosity = vgui.Create("DNumSlider", scrollPanel)
+        //water_viscosity:SetPos(0, 150)
+        //water_viscosity:SetSize(410, 15)
+        //water_viscosity:SetText("Water Viscocity")
+        //water_viscosity:SetMinMax(-10, 10)
+        //water_viscosity:SetValue(options.water_viscosity)
+        //water_viscosity:SetDecimals(2)
+        //water_viscosity:SetDark(true)
+        //function water_viscosity:OnValueChanged(val)
+        //    options.water_viscosity = val
+        //end
+
+        scrollPanel:meeSlider("Buoyancy Multiplier", -100, 100, "water_buoyancy", 2, TOP)
+        //local water_buoyancy = vgui.Create("DNumSlider", scrollPanel)
+        //water_buoyancy:SetPos(0, 175)
+        //water_buoyancy:SetSize(410, 15)
+        //water_buoyancy:SetText("Buoyancy Multiplier")
+        //water_buoyancy:SetMinMax(-100, 100)
+        //water_buoyancy:SetValue(options.water_buoyancy)
+        //water_buoyancy:SetDecimals(2)
+        //water_buoyancy:SetDark(true)
+        //function water_buoyancy:OnValueChanged(val)
+        //    options.water_buoyancy = val
+        //end
     end
 
     // minimap ortho view
