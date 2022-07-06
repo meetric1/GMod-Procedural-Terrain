@@ -1,4 +1,4 @@
-#Welcome to my procedural terrain addon
+#Welcome to my procedural terrain addon [![made with - mee++](https://img.shields.io/badge/made_with-mee%2B%2B-2ea44f)](https://)  
 
 So this is a project ive been working on for about 5 months now, I am pretty proud of its release however it will likely not be 100% perfect, please report any bugs you find.
 
