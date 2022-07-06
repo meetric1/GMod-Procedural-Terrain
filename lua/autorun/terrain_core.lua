@@ -6,8 +6,8 @@ if SERVER then resource.AddWorkshop("2830138108") end
 
 Terrain = Terrain or {}
 Terrain.ChunkSize = 256
-Terrain.Resolution = 3
-Terrain.ChunkResolution = 20
+Terrain.Resolution = 6
+Terrain.ChunkResolution = 10
 Terrain.LightmapRes = 1024
 Terrain.ChunkResScale = Terrain.ChunkSize * Terrain.ChunkResolution
 Terrain.Chunks = Terrain.Chunks or {}
@@ -24,7 +24,7 @@ Terrain.Variables = {	// variables that are networked
 	offset = 0,		// z offset
 	seed = 21,		
 	treeHeight = 2,
-	treeResolution = 10,
+	treeResolution = 5,
 	treeThreshold = 0.35,
 	waterHeight = -12300,
 	clampNoise = true,	// noise 0-1 or -1-1
@@ -37,6 +37,11 @@ Terrain.Variables = {	// variables that are networked
 	material_1 = "gm_construct/grass1",	// terrain main material
 	material_2 = "nature/rockfloor005a", // terrain secondary, rock material
 	material_3 = "procedural_terrain/water/water_warp", // water material
+
+	water_kill = false,
+	water_ignite = false,
+	water_viscosity = 1,
+	water_buoyancy = 1,
 }
 
 local invMagicNumber = 1 / 2048
