@@ -17,6 +17,7 @@ if game.GetMap() != "gm_flatgrass" then return end
 function ENT:SetupDataTables()
 	self:NetworkVar("Int", 0, "ChunkX")
     self:NetworkVar("Int", 1, "ChunkY")
+    self:NetworkVar("Bool", 0, "Flipped")
 end
 
 Terrain = Terrain or {}
@@ -48,7 +49,7 @@ function ENT:GetTreeData(pos, data, heightFunction)
     if data.spawnArea and math.abs(x + chunkoffsetx) < 1500 and math.abs(y + chunkoffsety) < 1500 then return nil end
 
     // the height of the vertex using the math function
-    local vertexHeight = heightFunction(x + chunkoffsetx, y + chunkoffsety, self)
+    local vertexHeight = heightFunction(x + chunkoffsetx, y + chunkoffsety)
     local middleHeight = Vector(0, 0, vertexHeight)
 
     local finalPos = Vector(x + chunkoffsetx, y + chunkoffsety, vertexHeight + Terrain.ZOffset - 25.6 * data.treeHeight) // pushed down 25.6 units, (height of the base of the tree model)
@@ -66,12 +67,12 @@ function ENT:GetTreeData(pos, data, heightFunction)
 
             // get the height of the 0x triangle
             local cornerWorldy = (y + cornery)
-            local cornerHeight = heightFunction(x + chunkoffsetx, cornerWorldy + chunkoffsety, self)
+            local cornerHeight = heightFunction(x + chunkoffsetx, cornerWorldy + chunkoffsety)
             local middleXPosition = Vector(0, cornery, cornerHeight)
 
             // get the height of the 0y triangle
             local cornerWorldx = (x + cornerx)
-            local cornerHeight = heightFunction(cornerWorldx + chunkoffsetx, y + chunkoffsety, self)
+            local cornerHeight = heightFunction(cornerWorldx + chunkoffsetx, y + chunkoffsety)
             local middleYPosition = Vector(cornerx, 0, cornerHeight)
             
             // we now have 3 points, construct a triangle from this and add the normal to the average normal
@@ -115,7 +116,7 @@ function ENT:GenerateTrees(heightFunction, data)
             m:SetTranslation(finalPos)
             m:SetAngles(Angle(0, randseedx * 3600, 0))//smoothedNormal:Angle() + Angle(90, 0, 0) Angle(0, randseedx * 3600, 0)
             m:SetScale(Vector(1, 1, 1) * data.treeHeight)
-            finalPos[3] = finalPos[3] + 823 * data.treeHeight  // add tree height
+            finalPos[3] = finalPos[3] + 256 * data.treeHeight  // add tree height
             table.insert(self.TreeMatrices, m)
             local modelIndex = math.floor(util.SharedRandom("TerrainModel" .. chunkIndex, 0, #Terrain.TreeModels - 0.9, randomIndex)) + 1
             table.insert(self.TreeModels, modelIndex)  // 4.1 means 1/50 chance for a rock to generate instead of a tree
@@ -144,13 +145,13 @@ function ENT:GenerateMesh(heightFunction)
                 // get the height of the 0x triangle
                 local cornerWorldx = vertexPos[1]
                 local cornerWorldy = (unwrappedPos[2] + cornery) * Terrain.ChunkSize
-                local cornerHeight = heightFunction(cornerWorldx + chunkoffsetx, cornerWorldy + chunkoffsety, self)
+                local cornerHeight = heightFunction(cornerWorldx + chunkoffsetx, cornerWorldy + chunkoffsety)
                 local middleXPosition = Vector(0, Terrain.ChunkSize * cornery, cornerHeight)
 
                 // get the height of the 0y triangle
                 local cornerWorldx = (unwrappedPos[1] + cornerx) * Terrain.ChunkSize
                 local cornerWorldy = vertexPos[2]
-                local cornerHeight = heightFunction(cornerWorldx + chunkoffsetx, cornerWorldy + chunkoffsety, self)
+                local cornerHeight = heightFunction(cornerWorldx + chunkoffsetx, cornerWorldy + chunkoffsety)
                 local middleYPosition = Vector(Terrain.ChunkSize * cornerx, 0, cornerHeight)
 
                 // we now have 3 points, construct a triangle from this and add the normal to the average normal
@@ -177,10 +178,11 @@ function ENT:GenerateMesh(heightFunction)
                 local worldy2 = (y + 1) * Terrain.ChunkSize
 
                 // the height of the vertex using the math function
-                local vertexHeight1 = heightFunction(worldx1 + chunkoffsetx, worldy1 + chunkoffsety, self)
-                local vertexHeight2 = heightFunction(worldx1 + chunkoffsetx, worldy2 + chunkoffsety, self)
-                local vertexHeight3 = heightFunction(worldx2 + chunkoffsetx, worldy1 + chunkoffsety, self)
-                local vertexHeight4 = heightFunction(worldx2 + chunkoffsetx, worldy2 + chunkoffsety, self)
+                local flipped = self:GetFlipped()
+                local vertexHeight1 = heightFunction(worldx1 + chunkoffsetx, worldy1 + chunkoffsety, flipped)
+                local vertexHeight2 = heightFunction(worldx1 + chunkoffsetx, worldy2 + chunkoffsety, flipped)
+                local vertexHeight3 = heightFunction(worldx2 + chunkoffsetx, worldy1 + chunkoffsety, flipped)
+                local vertexHeight4 = heightFunction(worldx2 + chunkoffsetx, worldy2 + chunkoffsety, flipped)
 
                 // vertex positions in local space
                 local vertexPos1 = Vector(worldx1, worldy1, vertexHeight1)
@@ -196,9 +198,8 @@ function ENT:GenerateMesh(heightFunction)
                 local uvx2 = ((self:GetChunkX() + r) / r + ((x + 1) / Terrain.ChunkResolution / r)) * 0.5
                 local uvy2 = ((self:GetChunkY() + r) / r + ((y + 1) / Terrain.ChunkResolution / r)) * 0.5
 
-                
-                local normal1 = (vertexPos1 - vertexPos2):Cross(vertexPos1 - vertexPos3):GetNormalized()
-                local normal2 = (vertexPos4 - vertexPos3):Cross(vertexPos4 - vertexPos2):GetNormalized()
+                local normal1 = -(vertexPos1 - vertexPos2):Cross(vertexPos1 - vertexPos3):GetNormalized()
+                local normal2 = -(vertexPos4 - vertexPos3):Cross(vertexPos4 - vertexPos2):GetNormalized()
 
                 local smoothedNormal1 = smoothedNormal(chunkoffsetx, chunkoffsety, vertexPos1)
                 local smoothedNormal2 = smoothedNormal(chunkoffsetx, chunkoffsety, vertexPos2)
@@ -221,21 +222,21 @@ function ENT:GenerateMesh(heightFunction)
                 mesh.TexCoord(0, 0, 0)        // texture UV
                 mesh.TexCoord(1, uvx1, uvy1)  // lightmap UV
                 mesh.Color(255, 255, 255, color1)
-                mesh.Normal(-normal1)
+                mesh.Normal(normal1)
                 
                 mesh.AdvanceVertex()
                 mesh.Position(vertexPos2)
                 mesh.TexCoord(0, 1, 0)
                 mesh.TexCoord(1, uvx1, uvy2)  
                 mesh.Color(255, 255, 255, color2)
-                mesh.Normal(-normal1)
+                mesh.Normal(normal1)
                 mesh.AdvanceVertex()
 
                 mesh.Position(vertexPos3)
                 mesh.TexCoord(0, 0, 1)
                 mesh.TexCoord(1, uvx2, uvy1)  
                 mesh.Color(255, 255, 255, color3)
-                mesh.Normal(-normal1)
+                mesh.Normal(normal1)
                 mesh.AdvanceVertex()
 
                 // second tri
@@ -243,21 +244,21 @@ function ENT:GenerateMesh(heightFunction)
                 mesh.TexCoord(0, 0, 1)
                 mesh.TexCoord(1, uvx2, uvy1)  
                 mesh.Color(255, 255, 255, color3)
-                mesh.Normal(-normal2)
+                mesh.Normal(normal2)
                 mesh.AdvanceVertex()
 
                 mesh.Position(vertexPos2)
                 mesh.TexCoord(0, 1, 0)
                 mesh.TexCoord(1, uvx1, uvy2) 
                 mesh.Color(255, 255, 255, color2)
-                mesh.Normal(-normal2)
+                mesh.Normal(normal2)
                 mesh.AdvanceVertex()
 
                 mesh.Position(vertexPos4)
                 mesh.TexCoord(0, 1, 1)
                 mesh.TexCoord(1, uvx2, uvy2) 
                 mesh.Color(255, 255, 255, color4)
-                mesh.Normal(-normal2)
+                mesh.Normal(normal2)
                 mesh.AdvanceVertex()
             end
         end
@@ -297,7 +298,7 @@ function ENT:GenerateGrass()
                 local worldy = (y + randoffsety) * Terrain.ChunkSize
 
                 // the height of the vertex using the math function
-                local vertexHeight = Terrain.MathFunc(worldx + chunkoffsetx, worldy + chunkoffsety, self) 
+                local vertexHeight = Terrain.MathFunc(worldx + chunkoffsetx, worldy + chunkoffsety) 
                 local mainPos = Vector(chunkoffsetx + worldx, chunkoffsety + worldy, vertexHeight + Terrain.ZOffset)
                 if Terrain.Variables.waterHeight and mainPos[3] < Terrain.Variables.waterHeight then continue end
 
@@ -330,10 +331,10 @@ function ENT:GenerateGrass()
 end
 
 // get the height of the terrain at a given point with given offset
-local function getChunkOffset(x, y, offsetx, offsety, chunk, heightFunction)
+local function getChunkOffset(x, y, offsetx, offsety, flipped, heightFunction)
 	local cs = Terrain.ChunkSize
 	local ox, oy = x * cs, y * cs
-	return Vector(ox, oy, heightFunction(ox + offsetx, oy + offsety, chunk))
+	return Vector(ox, oy, heightFunction(ox + offsetx, oy + offsety, flipped))
 end
 
 // create the collision mesh for the chunk, runs on server & client
@@ -353,10 +354,11 @@ function ENT:BuildCollision(heightFunction)
 			local offsetx = self:GetChunkX() * Terrain.ChunkResScale
 			local offsety = self:GetChunkY() * Terrain.ChunkResScale
 
-			local p1 = getChunkOffset(x, y, offsetx, offsety, self, heightFunction)
-			local p2 = getChunkOffset(x - 1, y, offsetx, offsety, self, heightFunction)
-			local p3 = getChunkOffset(x, y - 1, offsetx, offsety, self, heightFunction)
-			local p4 = getChunkOffset(x - 1, y - 1, offsetx, offsety, self, heightFunction)
+            local flipped = self:GetFlipped()
+			local p1 = getChunkOffset(x, y, offsetx, offsety, flipped, heightFunction)
+			local p2 = getChunkOffset(x - 1, y, offsetx, offsety, flipped, heightFunction)
+			local p3 = getChunkOffset(x, y - 1, offsetx, offsety, flipped, heightFunction)
+			local p4 = getChunkOffset(x - 1, y - 1, offsetx, offsety, flipped, heightFunction)
 			
 			table.Add(finalMesh, {
 				{pos = p1},
@@ -374,7 +376,7 @@ function ENT:BuildCollision(heightFunction)
 
     // tree collision
     // crashes if this is generated on client, guess trees & rocks will be buggy to interact with.. oh well
-    if SERVER then 
+    if SERVER and !self:GetFlipped() then
         local data = Terrain.Variables
         data.treeMultiplier = Terrain.ChunkResolution / data.treeResolution * Terrain.ChunkSize
         local randomIndex = 0
@@ -422,7 +424,6 @@ function ENT:Initialize()
     self:EnableCustomCollisions(true)
     self:GetPhysicsObject():EnableMotion(false)
     self:GetPhysicsObject():SetMass(50000)  // max weight, should help a bit with the physics solver
-    self:GetPhysicsObject():SetPos(self:GetPos())
     self:DrawShadow(false)
 end
 
@@ -433,9 +434,12 @@ function ENT:ClientInitialize()
         self:GetPhysicsObject():SetMass(50000)  // make sure to call these on client or else when you touch it, you will crash
         self:GetPhysicsObject():SetPos(self:GetPos())
     end
+
     self:GenerateMesh()
-    self:GenerateTrees()
-    self:GenerateGrass()
+    if !self:GetFlipped() then
+        self:GenerateTrees()
+        self:GenerateGrass()
+    end
 
     // if its the last chunk, generate the lightmap
     if self:GetChunkX() == -Terrain.Resolution and self:GetChunkY() == -Terrain.Resolution then
@@ -496,9 +500,13 @@ local math_Distance = math.Distance
 function ENT:GetRenderMesh()
     local self = self
 
-    if !self.TreeMatrices then return end
     // set a lightmap texture to be used instead of the default one
     render_SetLightmapTexture(lm)
+
+    if !self.TreeMatrices then 
+        renderTable.Mesh = self.RenderMesh
+        return renderTable 
+    end
 
     // get local vars
     local lod = self.LOD
@@ -507,7 +515,6 @@ function ENT:GetRenderMesh()
     local color = self.TreeColors
     local matrices = self.TreeMatrices
     local materials = Terrain.TreeMaterials
-    
     local flashlightOn = LocalPlayer():FlashlightIsOn()
 
     // reset lighting

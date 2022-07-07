@@ -16,6 +16,16 @@ if SERVER then
                 chunk:SetChunkY(y)
                 chunk:Spawn()
                 table.insert(Terrain.Chunks, chunk)
+
+                if Terrain.Variables.cave then
+                    local chunk = ents.Create("terrain_chunk")
+                    chunk:SetPos(Vector(x * Terrain.ChunkResScale, y * Terrain.ChunkResScale, Terrain.ZOffset))
+                    chunk:SetChunkX(x)
+                    chunk:SetChunkY(y)
+                    chunk:SetFlipped(true)
+                    chunk:Spawn()
+                    table.insert(Terrain.Chunks, chunk)
+                end
     
                 coroutine.wait(terrain_speed)
             end
@@ -75,12 +85,13 @@ else
     // clients can randomly forget chunk data during a lagspike, we rebuild it if that happens
     local co = coroutine.create(function()
         while true do 
+            local cave = (Terrain.Variables.cave and 2 or 1)
             coroutine.wait(1)
             if Terrain.ClientLoaded then
                 local chunks = ents.FindByClass("terrain_chunk")
-                if #chunks < (Terrain.Resolution * 2)^2 then 
+                if #chunks < ((Terrain.Resolution * 2)^2) * cave then 
                     hook.Add("HUDPaint", "terrain_load", loadhud)
-                    done = #chunks / (Terrain.Resolution * 2)^2
+                    done = #chunks / (Terrain.Resolution * 2)^2 / cave
                     continue
                 else
                     done = 1

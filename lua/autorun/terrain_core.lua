@@ -26,6 +26,7 @@ Terrain.Variables = {	// variables that are networked
 	treeHeight = 2,
 	treeResolution = 5,
 	treeThreshold = 0.5,
+	cave = false,
 	waterHeight = -12300,
 	clampNoise = true,	// noise 0-1 or -1-1
 	customFunction = nil,	// custom function to use, nil by default (not actually added to table, only here for visualization)
@@ -59,22 +60,22 @@ end
 function Terrain.BuildMathFunc(values)
 	values = values or Terrain.Variables
 	if values.customFunction then
-		local generatedFunction = setfenv(CompileString("local x, y, chunk = ...\n" .. values.customFunction, "Terrain Function"), Terrain.AllowedLibraries)
-		return function(x, y, chunk) 
+		local generatedFunction = setfenv(CompileString("local x, y = ...\n" .. values.customFunction, "Terrain Function"), Terrain.AllowedLibraries)
+		return function(x, y, flip) 
 			local x = x * invMagicNumber
 			local y = y * invMagicNumber
 
-			local final = generatedFunction(x, y, chunk) or 0
+			local final = generatedFunction(x, y) or 0
 
 			// finalize the value
 			if values.spawnArea then final = ((math.abs(x) < 0.7 and math.abs(y) < 0.7) and 0.05 or final) end	//spawn region gets space
 			final = math.Clamp(final, 0, 100)
-			return final * 256
+			return flip and (100 - final) * 256 or final * 256
 		end
 	end
 
 	local randomNum = 4980.57	// random num for seed
-	return function(x, y, chunk)
+	return function(x, y, flip)
 		local x = x * invMagicNumber
 		local y = y * invMagicNumber
 
@@ -91,7 +92,7 @@ function Terrain.BuildMathFunc(values)
 		// finalize the value
 		if values.spawnArea then final = ((math.abs(x) < 0.7 and math.abs(y) < 0.7) and 0.05 or final) end	//spawn region gets space
 		final = math.Clamp(final, 0, 100)
-		return final * 256	    
+		return flip and (100 - final) * 256 or final * 256
 	end
 end
 
@@ -214,13 +215,17 @@ local function generateLightmap(res, heightFunction)
 						shadowAmount = 50
 					end
 
-					if render.GetHDREnabled() then shadowAmount = shadowAmount * 0.2 end	// quick fix for HDR, not sure why it brightens the scene by 80%
-
 					if waterHeight then
 						local waterAmount = math_Clamp( (-shadowPos.z + waterHeight) * 0.2, 0, 50 )
+						if render.GetHDREnabled() then // quick fix for HDR, not sure why it brightens the scene by 80%
+							shadowAmount = shadowAmount * 0.2
+							waterAmount = waterAmount * 0.2 
+						end	
 						surface_SetDrawColor(shadowAmount - waterAmount * 0.5, shadowAmount - waterAmount*0.3, shadowAmount - waterAmount*0.1, 255)
 						surface_DrawRect(x * lightmapMultiplier, y * lightmapMultiplier, lightmapMultiplier, lightmapMultiplier)
 					else
+						if render.GetHDREnabled() then shadowAmount = shadowAmount * 0.2 end
+
 						surface_SetDrawColor(shadowAmount, shadowAmount, shadowAmount, 255)
 						surface_DrawRect(x * lightmapMultiplier, y * lightmapMultiplier, lightmapMultiplier, lightmapMultiplier)
 					end

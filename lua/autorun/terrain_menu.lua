@@ -116,10 +116,11 @@ concommand.Add("terrain_menu", function()
         normalOptions:meeSlider("Secondary Mountain Height", 0, 200, "height_2", 1, TOP)
         normalOptions:meeSlider("Secondary Moutain Size", 1, 50, "noiseScale_2", 1, TOP)
 
-        normalOptions:meeCheckbox("Leave Space for Flatgrass Building?", "spawnArea", BOTTOM)
-        normalOptions:meeCheckbox("Clamp Noise? (0 to 1 instead of -1 to 1)", "clampNoise", BOTTOM)
-        normalOptions:meeSlider("Terrain Seed", 0, 2^32, "seed", 0, BOTTOM)
-        normalOptions:meeSlider("Terrain Z Offset", 0, 100, "offset", 1, BOTTOM)
+        normalOptions:meeCheckbox("Flipped Chunks (must submit changes to see effect)", "cave", TOP)
+        normalOptions:meeCheckbox("Leave Space for Flatgrass Building", "spawnArea", TOP)
+        normalOptions:meeCheckbox("Clamp Noise (0 to 1 instead of -1 to 1)", "clampNoise", TOP)
+        normalOptions:meeSlider("Terrain Seed", 0, 2^32, "seed", 0, TOP)
+        normalOptions:meeSlider("Terrain Z Offset", 0, 100, "offset", 1, TOP)
 
         local material_grass = vgui.Create("DTextEntry", scrollPanel)
         material_grass:SetPos(0, 225)
@@ -207,7 +208,7 @@ concommand.Add("terrain_menu", function()
                 else
                     local generatedFunction = setfenv(compiledFunction, Terrain.AllowedLibraries)
                     local suc, msg = pcall(function()
-                        local compiled = generatedFunction(0, 0, Terrain.Chunks[1])
+                        local compiled = generatedFunction(0, 0)
                         if !isnumber(compiled) then
                             funcText:SetText(" Error: Return value must be a number")
                             funcText:SetColor(Color(255, 100, 100))
@@ -335,14 +336,60 @@ concommand.Add("terrain_menu", function()
     // saving & loading done here
     local function saveTab(tabs)
         local scrollPanel = vgui.Create("DScrollPanel", tabs)
-        local scrollEditTab = tabs:AddSheet("Save / Load", scrollPanel, "icon16/disk.png").Tab
+        local scrollEditTab = tabs:AddSheet("Saved Presets", scrollPanel, "icon16/disk.png").Tab
+
+        local saved_presets = vgui.Create("DComboBox", scrollPanel)
+        saved_presets:SetPos(0, 0)
+        saved_presets:SetSize(240, 20)
+        saved_presets:SetText("Saved Presets")
+
+        // create directiory for the files
+        file.CreateDir("terrain_presets/")
+
+        // get files in directory and add them as choices
+        local function refreshPresets()
+            local files, directories = file.Find("terrain_presets/*", "DATA")
+            for _, filename in ipairs(files) do
+                local json_file = file.Read("terrain_presets/" .. filename, "DATA")
+                saved_presets:AddChoice(string.Left(filename, #filename - 5), json_file)
+            end
+        end
+
+        refreshPresets()
+        function saved_presets:OnSelect(_, value, data)
+            options = util.JSONToTable(data)
+        end
 
         local saveButton = vgui.Create("DButton", scrollPanel)
         saveButton:SetPos(250, 10)
         saveButton:SetSize(150, 20)
         saveButton:SetText("Save Current Preset")
         function saveButton:DoClick()
-            
+            local ok = vgui.Create("DFrame")
+            ok:SetTitle("Save File")
+            ok:SetSize(200, 100)
+            ok:Center()
+            ok:MakePopup()
+            ok:SetBackgroundBlur(true)
+
+            local preset_name = vgui.Create("DTextEntry", ok)
+            preset_name:SetPos(10, 50)
+            preset_name:SetSize(110, 30)
+            preset_name:SetText("presetname")
+
+            local button = vgui.Create("DButton", ok)
+            button:SetPos(120, 50)
+            button:SetSize(70, 30)
+            button:SetText("Submit")
+            function button:DoClick()
+                local filename = preset_name:GetValue()
+                if filename == "" then filename = "presetname" end
+                if system.IsLinux() then filename = string.lower(filename) end  // linux only supports lowercase filenames
+                local json_data = util.TableToJSON(Terrain.Variables)
+                file.Write("terrain_presets/" .. filename .. ".json", json_data)
+                saved_presets:AddChoice(filename, json_data)
+                ok:Close()
+            end
         end
 
         local deleteButton = vgui.Create("DButton", scrollPanel)
@@ -362,6 +409,10 @@ concommand.Add("terrain_menu", function()
             button:SetSize(70, 30)
             button:SetText("Yes")
             function button:DoClick()
+                file.Delete("terrain_presets/" .. saved_presets:GetSelected() .. ".json")
+                // no RemoveChoice() ?
+                saved_presets:Clear()
+                refreshPresets()
                 ok:Close()
             end
 
