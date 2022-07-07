@@ -10,13 +10,6 @@ if SERVER then
     local function genChunks()
         for y = Terrain.Resolution - 1, -Terrain.Resolution, -1 do
             for x = Terrain.Resolution - 1, -Terrain.Resolution, -1 do
-                local chunk = ents.Create("terrain_chunk")
-                chunk:SetPos(Vector(x * Terrain.ChunkResScale, y * Terrain.ChunkResScale, Terrain.ZOffset))
-                chunk:SetChunkX(x)
-                chunk:SetChunkY(y)
-                chunk:Spawn()
-                table.insert(Terrain.Chunks, chunk)
-
                 if Terrain.Variables.cave then
                     local chunk = ents.Create("terrain_chunk")
                     chunk:SetPos(Vector(x * Terrain.ChunkResScale, y * Terrain.ChunkResScale, Terrain.ZOffset))
@@ -26,6 +19,14 @@ if SERVER then
                     chunk:Spawn()
                     table.insert(Terrain.Chunks, chunk)
                 end
+
+                local chunk = ents.Create("terrain_chunk")
+                chunk:SetPos(Vector(x * Terrain.ChunkResScale, y * Terrain.ChunkResScale, Terrain.ZOffset))
+                chunk:SetChunkX(x)
+                chunk:SetChunkY(y)
+                chunk:Spawn()
+                table.insert(Terrain.Chunks, chunk)
+
     
                 coroutine.wait(terrain_speed)
             end
